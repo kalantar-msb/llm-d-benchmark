@@ -209,15 +209,15 @@ Record configuration of one stack and one or more workload executions.
 
 - list of paths?
 
-### Task: `upload`
+### Task: `upload-s3`
 
 **Description**:
 
-Copy results from a locally mounted files to remote location. Should there be one task per target type?
+Copy results from a locally mounted files to remote s3 bucket.
 
 **Inputs**:
 
-- list of paths to upload
+- *paths* - list of paths to upload
 - target_details
 
     - this is specific to the target type, for example for s3 compatible bucket:
@@ -225,7 +225,6 @@ Copy results from a locally mounted files to remote location. Should there be on
     - *AWS_SECRET_ACCESS_KEY*
     - *s3_endpoint*
     - *s3_bucket*
-    - *target_object_name*
 
 **Outputs**:
 

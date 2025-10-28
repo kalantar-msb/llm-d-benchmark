@@ -447,3 +447,9 @@ workload:
       output_len: 300
     - question_len: 1000
       output_len: 1000
+upload_target:
+  type: s3
+  configuration:
+    bucket: cloud-object-storage-cos-standard-ere
+    endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+

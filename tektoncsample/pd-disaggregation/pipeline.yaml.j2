@@ -1,4 +1,4 @@
-# Inference Scheduling example benchmark
+# PD disaggregation example benchmark
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
@@ -49,10 +49,15 @@ spec:
       # maxParallelism: 2
       foreach:
         domain:
-          pluginConfigFile: {{ stack.treatments.pluginConfigFile | tojson }}
+          infra_i: {{ enumerate_list(stack.treatments) }}
 
       vars:
-        stackId: "{{ pluginConfigFile | dns }}"
+        decodeReplicas: "{{ infra_i.item.decodeReplicas }}"
+        decodeTensorParallelism: "{{ infra_i.item.decodeTensorParallelism }}"
+        prefillReplicas: "{{ infra_i.item.prefillReplicas }}"
+        prefillTensorParallelism: "{{ infra_i.item.prefillTensorParallelism }}"
+        stackId: "{{ infra_i.item.decodeReplicas ~ "_" ~ infra_i.item.decodeTensorParallelism ~ "_" ~ infra_i.item.prefillReplicas ~ "_" ~ infra_i.item.prefillTensorParallelism }}"
+
       tasks:
       - name: deploy-gaie-{{ stackId }}
         taskRef: { name: deploy-helm }
@@ -72,9 +77,6 @@ spec:
           {% if stack.gaie.repoUrl is defined and stack.gaie.repoUrl %}
           - { name: repoUrl, value: "{{ stack.gaie.repoUrl }}" }
           {% endif %}
-          - name: extraSets
-            value:
-              - inferenceExtension.pluginConfigFile="{{ stackId }}"
 
       - name: download-model
         taskRef: { name: download-model }
@@ -120,9 +122,13 @@ spec:
         foreach:
           domain:
             treatment_i: {{ enumerate_list(workload.treatments) }}
+
         vars: 
+          max_concurrency: "{{ treatment_i['item']['max-concurrency'] }}"
+          num_prompts: "{{ treatment_i['item']['num-prompts'] }}"
           taskPostfix: "{{ stackId }}-{{ treatment_i.i }}"
-          resultPath: "{{ stackId }}-{{ treatment_i.item.output_len }}_{{ treatment_i.item.question_len }}"
+          resultPath: "{{ stackId }}-{{ treatment_i['item']['max-concurrency'] }}_{{ treatment_i['item']['num-prompts'] }}"
+
         tasks:
         - __jinja__: |
             - name: create-workload-profile-{{ taskPostfix }}
@@ -138,8 +144,8 @@ spec:
                 - { name: url, value: url }
                 - name: treatment
                   value:
-                    output_len: "{{ treatment_i.item.output_len }}"
-                    question_len: "{{ treatment_i.item.question_len }}"
+                    max-concurrency: "{{ max_concurrency }}"
+                    num-prompts: "{{ num_prompts }}"
 
             - name: run-workload-{{ taskPostfix }}
               taskRef: { name: run-workload-{{ workload.harness }} }
@@ -169,7 +175,7 @@ spec:
       - name: delete-model-{{ stackId }}
         taskRef: { name: delete-model }
         runAfter:
-          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1].output_len }}_{{ workload.treatments[-1].question_len }}
+          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1]['max-concurrency'] }}_{{ workload.treatments[-1]['num-prompts'] }}
         params:
           - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
@@ -177,7 +183,7 @@ spec:
       - name: delete-gaie-{{ stackId }}
         taskRef: { name: delete-gaie }
         runAfter:
-          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1].output_len }}_{{ workload.treatments[-1].question_len }}
+          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1]['max-concurrency'] }}_{{ workload.treatments[-1]['num-prompts'] }}
         params:
           - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
@@ -185,9 +191,9 @@ spec:
     - name: document
       taskRef: { name: document }
       runAfter:
-        {% for p in stack.treatments.pluginConfigFile %}
-        - delete-model-{{ p | dns }}
-        - delete-gaie-{{ p | dns }}
+        {% for sT in stack.treatments %}
+        - delete-model-{{sT.decodeReplicas}}_{{sT.decodeTensorParallelism}}_{{sT.prefillReplicas}}_{{sT.prefillTensorParallelism}}
+        - delete-gaie-{{sT.decodeReplicas}}_{{sT.decodeTensorParallelism}}_{{sT.prefillReplicas}}_{{sT.prefillTensorParallelism}}
         {% endfor %}
       workspaces:
         - name: results
@@ -199,10 +205,10 @@ spec:
       params:
         - name: paths
           value:
-          {% for p in stack.treatments.pluginConfigFile %}
+          {% for sT in stack.treatments %}
           {% for wT in workload.treatments %}
-          - "{{ p | dns }}-{{wT['output_len']}}_{{wT['question_len']}}"
-          - "{{ p | dns }}-{{wT['output_len']}}_{{wT['question_len']}}/converted"
+          - "{{sT.decodeReplicas}}_{{sT.decodeTensorParallelism}}_{{sT.prefillReplicas}}_{{sT.prefillTensorParallelism}}-{{wT['max-concurrency']}}_{{wT['num-prompts']}}"
+          - "{{sT.decodeReplicas}}_{{sT.decodeTensorParallelism}}_{{sT.prefillReplicas}}_{{sT.prefillTensorParallelism}}-{{wT['max-concurrency']}}_{{wT['num-prompts']}}/converted"
           {% endfor %}
           {% endfor %}
         - name: target
@@ -218,9 +224,13 @@ spec:
     - loopName: cleanup
       foreach:
         domain:
-          pluginConfigFile: {{ stack.treatments.pluginConfigFile }}
+          infra_i: {{ enumerate_list(stack.treatments) }}
       vars:
-        stackId: "{{ pluginConfigFile | dns }}"
+        decodeReplicas: "{{ infra_i.item.decodeReplicas }}"
+        decodeTensorParallelism: "{{ infra_i.item.decodeTensorParallelism }}"
+        prefillReplicas: "{{ infra_i.item.prefillReplicas }}"
+        prefillTensorParallelism: "{{ infra_i.item.prefillTensorParallelism }}"
+        stackId: "{{ infra_i.item.decodeReplicas ~ "_" ~ infra_i.item.decodeTensorParallelism ~ "_" ~ infra_i.item.prefillReplicas ~ "_" ~ infra_i.item.prefillTensorParallelism }}"
       tasks:
         - name: delete-model-{{ stackId }}
           taskRef: { name: delete-model }
