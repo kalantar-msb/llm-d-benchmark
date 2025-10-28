@@ -4,18 +4,12 @@ kind: Pipeline
 metadata:
   name: {{ experiment.name | dns }}
 spec:
-{% if experiment.description is defined and experiment.description %}
+  {% if experiment.description is defined and experiment.description %}
   description: {{ experiment.description }}
-{% endif %}
-
-  params:
-    - name: namespace
-      type: string
-      default: default
+  {% endif %}
 
   tasks:
-    # Plain Tekton task — unchanged by the expander
-    - name: print-start
+    - name: log-start
       taskRef: { name: echo }
       params:
         - name: text
@@ -26,19 +20,22 @@ spec:
 
     - name: deploy-gateway
       taskRef: { name: deploy-helm }
+      results:
+        - { name: gateway, type: string }
+        - { name: serviceUrl, type: string}
       params:
         - { name: releaseName, value: "gateway" }
         - { name: namespace, value: $(params.namespace) }
         - { name: valuesObject, value: {{ stack.gateway.values }} }
-{% if stack.gateway.version is defined and stack.gateway.version %}
+        {% if stack.gateway.version is defined and stack.gateway.version %}
         - { name: version, value: "{{ stack.gateway.version }}" }
-{% endif %}
-{% if stack.gateway.repo is defined and stack.gateway.repo %}
+        {% endif %}
+        {% if stack.gateway.repo is defined and stack.gateway.repo %}
         - { name: repo, value: "{{ stack.gateway.repo }}" }
-{% endif %}
-{% if stack.gateway.repoUrl is defined and stack.gateway.repoUrl %}
+        {% endif %}
+        {% if stack.gateway.repoUrl is defined and stack.gateway.repoUrl %}
         - { name: repoUrl, value: "{{ stack.gateway.repoUrl }}" }
-{% endif %}
+        {% endif %}
 
     # Loop: set of stacks per stack (gateway, gaie, vllm)
     - loopName: per-stack
@@ -46,150 +43,142 @@ spec:
       foreach:
         domain:
           pluginConfigFile: {{ stack.treatments.pluginConfigFile | tojson }}
-      tasks:
 
-      - name: deploy-gaie-{{ pluginConfigFile | dns }}
+      vars:
+        stackId: "{{ pluginConfigFile | dns }}"
+      tasks:
+      - name: deploy-gaie-{{ stackId }}
         taskRef: { name: deploy-helm }
         runAfter: [ deploy-gateway ]
+        results:
+          - { name: inferencepool, type: string }
         params:
-          - { name: releaseName, value: "gaie-{{ pluginConfigFile | dns }}" }
+          - { name: releaseName, value: "gaie-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
           - { name: valuesObject, value: {{ stack.gaie.values }} }
-{% if stack.gaie.version is defined and stack.gaie.version %}
+          {% if stack.gaie.version is defined and stack.gaie.version %}
           - { name: version, value: "{{ stack.gaie.version }}" }
-{% endif %}
-{% if stack.gaie.repo is defined and stack.gaie.repo %}
+          {% endif %}
+          {% if stack.gaie.repo is defined and stack.gaie.repo %}
           - { name: repo, value: "{{ stack.gaie.repo }}" }
-{% endif %}
-{% if stack.gaie.repoUrl is defined and stack.gaie.repoUrl %}
+          {% endif %}
+          {% if stack.gaie.repoUrl is defined and stack.gaie.repoUrl %}
           - { name: repoUrl, value: "{{ stack.gaie.repoUrl }}" }
-{% endif %}
+          {% endif %}
           - name: extraSets
             value:
-              - inferenceExtension.pluginConfigFile="{{ pluginConfigFile }}"
+              - inferenceExtension.pluginConfigFile="{{ stackId }}"
 
       - name: download-model
         taskRef: { name: download-model }
         params:
           - name: model
             value: {{ modelId }}
-          - name HF_TOKEN
-            va;ie
+          - name: HF_TOKEN
 
-      - name: deploy-model-{{ pluginConfigFile | dns }}
+      - name: deploy-model-{{ stackId }}
         taskRef: { name: deploy-helm }
         runAfter: [ download-model ]
         params:
-          - { name: releaseName, value: "model-{{ pluginConfigFile | dns }}" }
+          - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
           - { name: valuesObject, value: {{ stack.model.values }} }
-{% if stack.model.version is defined and stack.model.version %}
+          {% if stack.model.version is defined and stack.model.version %}
           - { name: version, value: "{{ stack.model.version }}" }
-{% endif %}
-{% if stack.model.repo is defined and stack.model.repo %}
+          {% endif %}
+          {% if stack.model.repo is defined and stack.model.repo %}
           - { name: repo, value: "{{ stack.model.repo }}" }
-{% endif %}
-{% if stack.model.repoUrl is defined and stack.model.repoUrl %}
+          {% endif %}
+          {% if stack.model.repoUrl is defined and stack.model.repoUrl %}
           - { name: repoUrl, value: "{{ stack.model.repoUrl }}" }
-{% endif %}
+          {% endif %}
           - name: extraSets
             value:
-              - routing.inferencePool.name=gaie-{{ pluginConfigFile | dns }}
-              - routing.httpRoute.rules[0].backendRefs[0].name=gaie-{{ pluginConfigFile | dns }}
-              - routing.httpRoute.rules[1].backendRefs[0].name=gaie-{{ pluginConfigFile | dns }}
+              - routing.inferencePool.name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
+              - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
+              - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
 
-{% macro treatments_to_list(treatments) -%}
-{%- for t in treatments -%}
-"{%- for k, v in t | dictsort -%}
-  {{- (v|string).replace('"', '\"') -}}{%- if not loop.last -%}_{%- endif -%}
-{%- endfor -%}"
-{%- if not loop.last -%}, {% endif -%}
-{%- endfor -%}
-{%- endmacro %}
-
-
-
-{% set ns = namespace(treatment_labels=[]) %}
-{% for t in workload.treatments %}
-  {% set parts = [] %}
-  {% for k, v in t | dictsort %}
-    {% set _ = parts.append((v|string).replace('"', '\"')) %}
-  {% endfor %}
-  {% set _ = ns.treatment_labels.append(parts | join('_')) %}
-{% endfor %}
-
-
-{% macro find_index(lst, value, default=-1) -%}
-  {%- set target = (value|string)|trim -%}
-  {%- set ns = namespace(idx=default) -%}
-  {%- for item in lst -%}
-    {%- set candidate = (item|string)|trim -%}
-    {%- if ns.idx == default and candidate == target -%}
-      {%- set ns.idx = loop.index0 -%}
-    {%- endif -%}
-  {%- endfor -%}
-  {{- ns.idx -}}
-{%- endmacro %}
-
-
-{% macro label_for(d) -%}
-  {%- for k, v in d | dictsort -%}
-    {{- (v|string).replace('"', '\"') -}}{%- if not loop.last -%}_{%- endif -%}
-  {%- endfor -%}
-{%- endmacro %}
-
-
-{% set treatments_list = treatments_to_list(workload.treatments) %}
+      - name: deploy-httproute-{{ stackId }}
+        taskRef: deploy-httproute
+        runAfter: [ "deploy-gaie-{{ stackId }}", deploy-gateway ]
+        params:
+          - { name: gateway, value: $(tasks.deploy-gateway.results.gateway) }
+          - { name: inferencepool, value: "$(tasks.deploy-gaie-{{ stackId }}.results.inferencepool)" }
+          - { name: model_label, value: {{ modelLabel }}}
 
       # inner loop
       - loopName: per-workload
         foreach:
           domain:
-            treatment: {{ workload.treatments }}
+            treatment_i: {{ enumerate_list(workload.treatments) }}
+        vars: 
+          taskPostfix: "{{ stackId }}-{{ treatment_i.i }}"
+          resultPath: "{{ stackId }}-{{ treatment_i.item.output_len }}_{{ treatment_i.item.question_len }}"
         tasks:
-{% set tl = label_for(treatment) %}
-          - name: run-workload-{{ pluginConfigFile|dns }}_{{ tl }}
-            taskRef: { name: run-{{ workload.harness }} }
-            runAfter:
-              - "deploy-model-{{ pluginConfigFile|dns }}"
-{% for item in ns.treatment_labels %}
-              - "{{ item }}"
-{% endfor %}
-            params:
-              - { name: harness, value: "{{ workload.harness }}" }
-              - { name: profileTemplate, value: "{{ workload.profile }}" }
-              - { name: treatment, value: "{{ treatment }}" }
-          # includes convert results to standard format
+        - __jinja__: |
+            - name: create-workload-profile-{{ taskPostfix }}
+              taskRef: { name: create-workload-profile-{{ workload.harness }} }
+              results:
+                - { name: profile }
+              params:
+                - { name: harness, value: "{{ workload.harness }}" }
+                - { name: profileTemplate, value: "{{ workload.profile }}" }
+                - { name: model, value: "{{ modelId }}" }
+                - { name: url, value: url }
+                - name: treatment
+                  value:
+                    output_len: "{{ treatment_i.item.output_len }}"
+                    question_len: "{{ treatment_i.item.question_len }}"
+
+            - name: run-workload-{{ taskPostfix }}
+              taskRef: { name: run-workload-{{ workload.harness }} }
+              runAfter:
+              - create-workload-profile-{{ taskPostfix }}
+              {% if not treatment_i.is_first %}
+              - run-workload-profile-{{ stackId }}-{{ treatment_i.prev_i }}
+              {% endif %}
+              params:
+                - { name: harness, value: "{{ workload.harness }}" }
+                - { name: path, value: "{{ resultPath }}"}
+
+            - name: tranform-workload-results-{{ taskPostfix }}
+              taskRef: { name: transform-results-{{ workload.harness }} }
+              runAfter:
+              - run-workload-{{ taskPostfix }}
+              params:
+                - { name: sourcePath, value: "{{ resultPath }}" }
+                - { name: targetPath, value: "{{ resultPath }}/converted" }
+
 
       # after workloads completed, clean up stack
-      - name: delete-model-{{ pluginConfigFile | dns }}
-        taskRef: { name: delete-helm }
-        runAfter: [ download-model ]
+      - name: delete-model-{{ stackId }}
+        taskRef: { name: delete-model }
+        runAfter:
+          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1].output_len }}_{{ workload.treatments[-1].question_len }}
         params:
-          - { name: releaseName, value: "model-{{ pluginConfigFile | dns }}" }
+          - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
 
-      - name: delete-gaie-{{ pluginConfigFile | dns }}
-        taskRef: { name: delete-helm }
-        runAfter: [ download-model ]
+      - name: delete-gaie-{{ stackId }}
+        taskRef: { name: delete-gaie }
+        runAfter:
+          - run-workload-inference_perf_{{ stackId }}_{{ workload.treatments[-1].output_len }}_{{ workload.treatments[-1].question_len }}
         params:
-          - { name: releaseName, value: "model-{{ pluginConfigFile | dns }}" }
+          - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
 
-    # Aggregate after all per-model tasks finish.
-    # Use an inline list to avoid indentation issues with Jinja.
-    - name: aggregate-results
-      taskRef: { name: aggregate }
+    - name: document
+      taskRef: { name: document }
+      runAfter: []
+
+    - name: upload
+      taskRef: { name: upload }
+      runAfter: [ document ]
       params:
-        - name: note
-          value: "All models processed."
-
-    - name: document-experiment
-      taskRef: { name: document-experiment }
-
-    - name: upload-results
-      taskRef: { name: upload-results }
-      runAfter: [ aggregate-results, document-experiment ]
+        - name: paths
+          value: path
+        - name: targetDetails
+          value: details
 
   finally:
     # Loop in 'finally': make all stacks are deleted when done
@@ -197,25 +186,24 @@ spec:
     - loopName: cleanup
       foreach:
         domain:
-          pluginConfigFile: {{ stack.treatments.pluginConfigFile | tojson }}
+          pluginConfigFile: {{ stack.treatments.pluginConfigFile }}
+      vars:
+        stackId: "{{ pluginConfigFile | dns }}"
       tasks:
-        - name: delete-model-{{ pluginConfigFile | dns }}
-          taskRef: { name: delete-helm }
-          runAfter: [ download-model ]
+        - name: delete-model-{{ stackId }}
+          taskRef: { name: delete-model }
           params:
-            - { name: releaseName, value: "model-{{ pluginConfigFile | dns }}" }
+            - { name: releaseName, value: "model-{{ stackId }}" }
             - { name: namespace , value: $(params.namespace) }
 
-        - name: delete-gaie-{{ pluginConfigFile | dns }}
-          taskRef: { name: delete-helm }
-          runAfter: [ download-model ]
+        - name: delete-gaie-{{ stackId }}
+          taskRef: { name: delete-gaie }
           params:
-            - { name: releaseName, value: "model-{{ pluginConfigFile | dns }}" }
+            - { name: releaseName, value: "model-{{ stackId }}" }
             - { name: namespace , value: $(params.namespace) }
 
-        - name: delete-gateway-{{ pluginConfigFile | dns }}
-          taskRef: { name: delete-helm }
-          runAfter: [ download-model ]
+        - name: delete-gateway-{{ stackId }}
+          taskRef: { name: delete-gateway }
           params:
             - { name: releaseName, value: "gateway" }
             - { name: namespace , value: $(params.namespace) }

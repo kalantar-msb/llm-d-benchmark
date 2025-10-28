@@ -3,6 +3,7 @@ experiment:
   description: Sample Inference Scheduling Experiment
 
 modelId: "Qwen/Qwen3-0.6B"
+modelLabel: "qwen-qwen3-0-6b"
 
 stack:
   treatments:
