@@ -2,8 +2,8 @@ experiment:
   name: pd-disaggregation
   description: Sample PD Disaggregation Experiment
 
-modelId: "Qwen/Qwen3-0.6B"
-modelLabel: "qwen-qwen3-0-6b"
+modelId: "meta-llama/Llama-3.1-8B-Instruct"
+modelLabelPrefix: "llama-3-1-8b-instruct"
 
 stack:
   treatments:

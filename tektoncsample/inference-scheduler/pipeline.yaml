@@ -19,9 +19,7 @@ spec:
     - name: text
       value: 'Starting pipeline "inference-scheduling"
 
-        Assumes that secret/hf-secret is defined with field HF_TOKEN
-
-        '
+        Assumes that secret/hf-secret is defined with field HF_TOKEN'
   - name: deploy-gateway
     taskRef:
       name: deploy-helm
@@ -36,7 +34,7 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x10112fdc0>
+      value: <built-in method values of dict object at 0x1046e7c80>
     - name: repo
       value: llm-d-infra
     - name: repoUrl
@@ -55,11 +53,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x101098d80>
+      value: <built-in method values of dict object at 0x1046e7cc0>
     - name: version
       value: v1.0.1
     - name: extraSets
       value:
+      - inferencepool.matchLabels.ll-d.ai/model=qwen-qwen3-0-6b-inf-sche-none-yaml
       - inferenceExtension.pluginConfigFile="inf-sche-none-yaml"
   - name: download-model
     taskRef:
@@ -75,13 +74,16 @@ spec:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-inf-sche-none-yaml
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x10112ff80>
+      value: <built-in method values of dict object at 0x1046e7c40>
     - name: version
       value: modelchartversion
     - name: repo
@@ -90,6 +92,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=Qwen/Qwen3-0.6B
+      - modelArtifacts.uri="pvc://model-pvc/models/Qwen/Qwen3-0.6B"
+      - fullnameOverride=qwen-qwen3-0-6b-inf-sche-none-yaml
       - routing.inferencePool.name="$(tasks.gaie-inf-sche-none-yaml.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-inf-sche-none-yaml.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-inf-sche-none-yaml.results.inferencepool)"
@@ -104,7 +109,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-inf-sche-none-yaml.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: qwen-qwen3-0-6b-inf-sche-none-yaml
   - name: create-workload-profile-inf-sche-none-yaml-0
     taskRef:
       name: create-workload-profile-inference-perf
@@ -136,6 +141,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-0.results.profile)
     - name: path
       value: inf-sche-none-yaml-100_100
   - name: tranform-workload-results-inf-sche-none-yaml-0
@@ -181,6 +188,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-1.results.profile)
     - name: path
       value: inf-sche-none-yaml-200_100
   - name: tranform-workload-results-inf-sche-none-yaml-1
@@ -226,6 +235,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-2.results.profile)
     - name: path
       value: inf-sche-none-yaml-1000_100
   - name: tranform-workload-results-inf-sche-none-yaml-2
@@ -271,6 +282,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-3.results.profile)
     - name: path
       value: inf-sche-none-yaml-100_300
   - name: tranform-workload-results-inf-sche-none-yaml-3
@@ -316,6 +329,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-4.results.profile)
     - name: path
       value: inf-sche-none-yaml-300_300
   - name: tranform-workload-results-inf-sche-none-yaml-4
@@ -361,6 +376,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-5.results.profile)
     - name: path
       value: inf-sche-none-yaml-1000_300
   - name: tranform-workload-results-inf-sche-none-yaml-5
@@ -406,6 +423,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-6.results.profile)
     - name: path
       value: inf-sche-none-yaml-100_1000
   - name: tranform-workload-results-inf-sche-none-yaml-6
@@ -451,6 +470,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-7.results.profile)
     - name: path
       value: inf-sche-none-yaml-300_1000
   - name: tranform-workload-results-inf-sche-none-yaml-7
@@ -496,6 +517,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-none-yaml-8.results.profile)
     - name: path
       value: inf-sche-none-yaml-1000_1000
   - name: tranform-workload-results-inf-sche-none-yaml-8
@@ -544,11 +567,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x101098d80>
+      value: <built-in method values of dict object at 0x1046e7cc0>
     - name: version
       value: v1.0.1
     - name: extraSets
       value:
+      - inferencepool.matchLabels.ll-d.ai/model=qwen-qwen3-0-6b-inf-sche-prefix-yaml
       - inferenceExtension.pluginConfigFile="inf-sche-prefix-yaml"
   - name: download-model
     taskRef:
@@ -564,13 +588,16 @@ spec:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-inf-sche-prefix-yaml
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x10112ff80>
+      value: <built-in method values of dict object at 0x1046e7c40>
     - name: version
       value: modelchartversion
     - name: repo
@@ -579,6 +606,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=Qwen/Qwen3-0.6B
+      - modelArtifacts.uri="pvc://model-pvc/models/Qwen/Qwen3-0.6B"
+      - fullnameOverride=qwen-qwen3-0-6b-inf-sche-prefix-yaml
       - routing.inferencePool.name="$(tasks.gaie-inf-sche-prefix-yaml.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-inf-sche-prefix-yaml.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-inf-sche-prefix-yaml.results.inferencepool)"
@@ -593,7 +623,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-inf-sche-prefix-yaml.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: qwen-qwen3-0-6b-inf-sche-prefix-yaml
   - name: create-workload-profile-inf-sche-prefix-yaml-0
     taskRef:
       name: create-workload-profile-inference-perf
@@ -625,6 +655,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-0.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-100_100
   - name: tranform-workload-results-inf-sche-prefix-yaml-0
@@ -670,6 +702,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-1.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-200_100
   - name: tranform-workload-results-inf-sche-prefix-yaml-1
@@ -715,6 +749,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-2.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-1000_100
   - name: tranform-workload-results-inf-sche-prefix-yaml-2
@@ -760,6 +796,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-3.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-100_300
   - name: tranform-workload-results-inf-sche-prefix-yaml-3
@@ -805,6 +843,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-4.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-300_300
   - name: tranform-workload-results-inf-sche-prefix-yaml-4
@@ -850,6 +890,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-5.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-1000_300
   - name: tranform-workload-results-inf-sche-prefix-yaml-5
@@ -895,6 +937,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-6.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-100_1000
   - name: tranform-workload-results-inf-sche-prefix-yaml-6
@@ -940,6 +984,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-7.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-300_1000
   - name: tranform-workload-results-inf-sche-prefix-yaml-7
@@ -985,6 +1031,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-prefix-yaml-8.results.profile)
     - name: path
       value: inf-sche-prefix-yaml-1000_1000
   - name: tranform-workload-results-inf-sche-prefix-yaml-8
@@ -1033,11 +1081,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x101098d80>
+      value: <built-in method values of dict object at 0x1046e7cc0>
     - name: version
       value: v1.0.1
     - name: extraSets
       value:
+      - inferencepool.matchLabels.ll-d.ai/model=qwen-qwen3-0-6b-inf-sche-kv-yaml
       - inferenceExtension.pluginConfigFile="inf-sche-kv-yaml"
   - name: download-model
     taskRef:
@@ -1053,13 +1102,16 @@ spec:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-inf-sche-kv-yaml
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x10112ff80>
+      value: <built-in method values of dict object at 0x1046e7c40>
     - name: version
       value: modelchartversion
     - name: repo
@@ -1068,6 +1120,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=Qwen/Qwen3-0.6B
+      - modelArtifacts.uri="pvc://model-pvc/models/Qwen/Qwen3-0.6B"
+      - fullnameOverride=qwen-qwen3-0-6b-inf-sche-kv-yaml
       - routing.inferencePool.name="$(tasks.gaie-inf-sche-kv-yaml.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-inf-sche-kv-yaml.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-inf-sche-kv-yaml.results.inferencepool)"
@@ -1082,7 +1137,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-inf-sche-kv-yaml.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: qwen-qwen3-0-6b-inf-sche-kv-yaml
   - name: create-workload-profile-inf-sche-kv-yaml-0
     taskRef:
       name: create-workload-profile-inference-perf
@@ -1114,6 +1169,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-0.results.profile)
     - name: path
       value: inf-sche-kv-yaml-100_100
   - name: tranform-workload-results-inf-sche-kv-yaml-0
@@ -1159,6 +1216,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-1.results.profile)
     - name: path
       value: inf-sche-kv-yaml-200_100
   - name: tranform-workload-results-inf-sche-kv-yaml-1
@@ -1204,6 +1263,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-2.results.profile)
     - name: path
       value: inf-sche-kv-yaml-1000_100
   - name: tranform-workload-results-inf-sche-kv-yaml-2
@@ -1249,6 +1310,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-3.results.profile)
     - name: path
       value: inf-sche-kv-yaml-100_300
   - name: tranform-workload-results-inf-sche-kv-yaml-3
@@ -1294,6 +1357,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-4.results.profile)
     - name: path
       value: inf-sche-kv-yaml-300_300
   - name: tranform-workload-results-inf-sche-kv-yaml-4
@@ -1339,6 +1404,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-5.results.profile)
     - name: path
       value: inf-sche-kv-yaml-1000_300
   - name: tranform-workload-results-inf-sche-kv-yaml-5
@@ -1384,6 +1451,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-6.results.profile)
     - name: path
       value: inf-sche-kv-yaml-100_1000
   - name: tranform-workload-results-inf-sche-kv-yaml-6
@@ -1429,6 +1498,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-7.results.profile)
     - name: path
       value: inf-sche-kv-yaml-300_1000
   - name: tranform-workload-results-inf-sche-kv-yaml-7
@@ -1474,6 +1545,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-kv-yaml-8.results.profile)
     - name: path
       value: inf-sche-kv-yaml-1000_1000
   - name: tranform-workload-results-inf-sche-kv-yaml-8
@@ -1522,11 +1595,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x101098d80>
+      value: <built-in method values of dict object at 0x1046e7cc0>
     - name: version
       value: v1.0.1
     - name: extraSets
       value:
+      - inferencepool.matchLabels.ll-d.ai/model=qwen-qwen3-0-6b-inf-sche-queue-yaml
       - inferenceExtension.pluginConfigFile="inf-sche-queue-yaml"
   - name: download-model
     taskRef:
@@ -1542,13 +1616,16 @@ spec:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-inf-sche-queue-yaml
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x10112ff80>
+      value: <built-in method values of dict object at 0x1046e7c40>
     - name: version
       value: modelchartversion
     - name: repo
@@ -1557,6 +1634,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=Qwen/Qwen3-0.6B
+      - modelArtifacts.uri="pvc://model-pvc/models/Qwen/Qwen3-0.6B"
+      - fullnameOverride=qwen-qwen3-0-6b-inf-sche-queue-yaml
       - routing.inferencePool.name="$(tasks.gaie-inf-sche-queue-yaml.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-inf-sche-queue-yaml.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-inf-sche-queue-yaml.results.inferencepool)"
@@ -1571,7 +1651,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-inf-sche-queue-yaml.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: qwen-qwen3-0-6b-inf-sche-queue-yaml
   - name: create-workload-profile-inf-sche-queue-yaml-0
     taskRef:
       name: create-workload-profile-inference-perf
@@ -1603,6 +1683,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-0.results.profile)
     - name: path
       value: inf-sche-queue-yaml-100_100
   - name: tranform-workload-results-inf-sche-queue-yaml-0
@@ -1648,6 +1730,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-1.results.profile)
     - name: path
       value: inf-sche-queue-yaml-200_100
   - name: tranform-workload-results-inf-sche-queue-yaml-1
@@ -1693,6 +1777,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-2.results.profile)
     - name: path
       value: inf-sche-queue-yaml-1000_100
   - name: tranform-workload-results-inf-sche-queue-yaml-2
@@ -1738,6 +1824,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-3.results.profile)
     - name: path
       value: inf-sche-queue-yaml-100_300
   - name: tranform-workload-results-inf-sche-queue-yaml-3
@@ -1783,6 +1871,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-4.results.profile)
     - name: path
       value: inf-sche-queue-yaml-300_300
   - name: tranform-workload-results-inf-sche-queue-yaml-4
@@ -1828,6 +1918,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-5.results.profile)
     - name: path
       value: inf-sche-queue-yaml-1000_300
   - name: tranform-workload-results-inf-sche-queue-yaml-5
@@ -1873,6 +1965,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-6.results.profile)
     - name: path
       value: inf-sche-queue-yaml-100_1000
   - name: tranform-workload-results-inf-sche-queue-yaml-6
@@ -1918,6 +2012,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-7.results.profile)
     - name: path
       value: inf-sche-queue-yaml-300_1000
   - name: tranform-workload-results-inf-sche-queue-yaml-7
@@ -1963,6 +2059,8 @@ spec:
     params:
     - name: harness
       value: inference-perf
+    - name: profile
+      value: $(tasks.create-workload-profile-inf-sche-queue-yaml-8.results.profile)
     - name: path
       value: inf-sche-queue-yaml-1000_1000
   - name: tranform-workload-results-inf-sche-queue-yaml-8

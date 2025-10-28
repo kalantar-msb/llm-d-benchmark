@@ -21,7 +21,7 @@ spec:
       taskRef: { name: echo }
       params:
         - name: text
-          value: |
+          value: |-
             Starting pipeline "{{ experiment.name }}"
             Assumes that secret/hf-secret is defined with field HF_TOKEN
 
@@ -53,6 +53,8 @@ spec:
 
       vars:
         stackId: "{{ pluginConfigFile | dns }}"
+        stackModelLabel:  "{{ modelLabelPrefix }}-{{pluginConfigFile | dns}}"
+
       tasks:
       - name: deploy-gaie-{{ stackId }}
         taskRef: { name: deploy-helm }
@@ -74,6 +76,7 @@ spec:
           {% endif %}
           - name: extraSets
             value:
+              - inferencepool.matchLabels.ll-d.ai/model={{ stackModelLabel }}
               - inferenceExtension.pluginConfigFile="{{ stackId }}"
 
       - name: download-model
@@ -88,6 +91,8 @@ spec:
       - name: deploy-model-{{ stackId }}
         taskRef: { name: deploy-helm }
         runAfter: [ download-model ]
+        results:
+          - { name: serviceUrl, type: string }
         params:
           - { name: releaseName, value: "model-{{ stackId }}" }
           - { name: namespace , value: $(params.namespace) }
@@ -103,6 +108,9 @@ spec:
           {% endif %}
           - name: extraSets
             value:
+              - modelArtifacts.name={{ modelId }}
+              - modelArtifacts.uri="pvc://model-pvc/models/{{ modelId }}"
+              - fullnameOverride={{ stackModelLabel }}
               - routing.inferencePool.name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
               - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
               - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-{{ stackId }}.results.inferencepool)"
@@ -113,7 +121,7 @@ spec:
         params:
           - { name: gateway, value: $(tasks.deploy-gateway.results.gateway) }
           - { name: inferencepool, value: "$(tasks.deploy-gaie-{{ stackId }}.results.inferencepool)" }
-          - { name: model_label, value: {{ modelLabel }}}
+          - { name: model_label, value: "{{ stackModelLabel }}" }
 
       # inner loop
       - loopName: per-workload
@@ -152,6 +160,7 @@ spec:
                 - name: results
               params:
                 - { name: harness, value: "{{ workload.harness }}" }
+                - { name: profile, value: $(tasks.create-workload-profile-{{ taskPostfix }}.results.profile) }
                 - { name: path, value: "{{ resultPath }}"}
 
             - name: tranform-workload-results-{{ taskPostfix }}

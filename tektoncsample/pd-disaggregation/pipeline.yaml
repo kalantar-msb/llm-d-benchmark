@@ -19,9 +19,7 @@ spec:
     - name: text
       value: 'Starting pipeline "pd-disaggregation"
 
-        Assumes that secret/hf-secret is defined with field HF_TOKEN
-
-        '
+        Assumes that secret/hf-secret is defined with field HF_TOKEN'
   - name: deploy-gateway
     taskRef:
       name: deploy-helm
@@ -36,7 +34,7 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x102f56440>
+      value: <built-in method values of dict object at 0x1036fe480>
     - name: repo
       value: llm-d-infra
     - name: repoUrl
@@ -55,9 +53,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-0
   - name: download-model
     taskRef:
       name: download-model
@@ -65,20 +66,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-1_8_8_1
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-1_8_8_1
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -87,6 +91,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-0
       - routing.inferencePool.name="$(tasks.gaie-1_8_8_1.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-1_8_8_1.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-1_8_8_1.results.inferencepool)"
@@ -101,7 +108,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-1_8_8_1.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-0
   - name: create-workload-profile-1_8_8_1-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -115,7 +122,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -133,6 +140,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-0.results.profile)
     - name: path
       value: 1_8_8_1-1_10
   - name: tranform-workload-results-1_8_8_1-0
@@ -160,7 +169,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -178,6 +187,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-1.results.profile)
     - name: path
       value: 1_8_8_1-8_80
   - name: tranform-workload-results-1_8_8_1-1
@@ -205,7 +216,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -223,6 +234,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-2.results.profile)
     - name: path
       value: 1_8_8_1-32_320
   - name: tranform-workload-results-1_8_8_1-2
@@ -250,7 +263,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -268,6 +281,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-3.results.profile)
     - name: path
       value: 1_8_8_1-64_640
   - name: tranform-workload-results-1_8_8_1-3
@@ -295,7 +310,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -313,6 +328,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-4.results.profile)
     - name: path
       value: 1_8_8_1-128_1280
   - name: tranform-workload-results-1_8_8_1-4
@@ -340,7 +357,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -358,6 +375,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_8_1-5.results.profile)
     - name: path
       value: 1_8_8_1-256_2560
   - name: tranform-workload-results-1_8_8_1-5
@@ -406,9 +425,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-1
   - name: download-model
     taskRef:
       name: download-model
@@ -416,20 +438,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-1_8_4_2
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-1_8_4_2
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -438,6 +463,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-1
       - routing.inferencePool.name="$(tasks.gaie-1_8_4_2.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-1_8_4_2.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-1_8_4_2.results.inferencepool)"
@@ -452,7 +480,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-1_8_4_2.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-1
   - name: create-workload-profile-1_8_4_2-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -466,7 +494,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -484,6 +512,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-0.results.profile)
     - name: path
       value: 1_8_4_2-1_10
   - name: tranform-workload-results-1_8_4_2-0
@@ -511,7 +541,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -529,6 +559,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-1.results.profile)
     - name: path
       value: 1_8_4_2-8_80
   - name: tranform-workload-results-1_8_4_2-1
@@ -556,7 +588,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -574,6 +606,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-2.results.profile)
     - name: path
       value: 1_8_4_2-32_320
   - name: tranform-workload-results-1_8_4_2-2
@@ -601,7 +635,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -619,6 +653,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-3.results.profile)
     - name: path
       value: 1_8_4_2-64_640
   - name: tranform-workload-results-1_8_4_2-3
@@ -646,7 +682,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -664,6 +700,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-4.results.profile)
     - name: path
       value: 1_8_4_2-128_1280
   - name: tranform-workload-results-1_8_4_2-4
@@ -691,7 +729,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -709,6 +747,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_4_2-5.results.profile)
     - name: path
       value: 1_8_4_2-256_2560
   - name: tranform-workload-results-1_8_4_2-5
@@ -757,9 +797,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-2
   - name: download-model
     taskRef:
       name: download-model
@@ -767,20 +810,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-1_8_2_4
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-1_8_2_4
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -789,6 +835,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-2
       - routing.inferencePool.name="$(tasks.gaie-1_8_2_4.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-1_8_2_4.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-1_8_2_4.results.inferencepool)"
@@ -803,7 +852,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-1_8_2_4.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-2
   - name: create-workload-profile-1_8_2_4-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -817,7 +866,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -835,6 +884,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-0.results.profile)
     - name: path
       value: 1_8_2_4-1_10
   - name: tranform-workload-results-1_8_2_4-0
@@ -862,7 +913,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -880,6 +931,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-1.results.profile)
     - name: path
       value: 1_8_2_4-8_80
   - name: tranform-workload-results-1_8_2_4-1
@@ -907,7 +960,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -925,6 +978,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-2.results.profile)
     - name: path
       value: 1_8_2_4-32_320
   - name: tranform-workload-results-1_8_2_4-2
@@ -952,7 +1007,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -970,6 +1025,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-3.results.profile)
     - name: path
       value: 1_8_2_4-64_640
   - name: tranform-workload-results-1_8_2_4-3
@@ -997,7 +1054,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1015,6 +1072,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-4.results.profile)
     - name: path
       value: 1_8_2_4-128_1280
   - name: tranform-workload-results-1_8_2_4-4
@@ -1042,7 +1101,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1060,6 +1119,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_8_2_4-5.results.profile)
     - name: path
       value: 1_8_2_4-256_2560
   - name: tranform-workload-results-1_8_2_4-5
@@ -1108,9 +1169,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-3
   - name: download-model
     taskRef:
       name: download-model
@@ -1118,20 +1182,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-1_4_6_2
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-1_4_6_2
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -1140,6 +1207,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-3
       - routing.inferencePool.name="$(tasks.gaie-1_4_6_2.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-1_4_6_2.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-1_4_6_2.results.inferencepool)"
@@ -1154,7 +1224,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-1_4_6_2.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-3
   - name: create-workload-profile-1_4_6_2-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -1168,7 +1238,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1186,6 +1256,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-0.results.profile)
     - name: path
       value: 1_4_6_2-1_10
   - name: tranform-workload-results-1_4_6_2-0
@@ -1213,7 +1285,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1231,6 +1303,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-1.results.profile)
     - name: path
       value: 1_4_6_2-8_80
   - name: tranform-workload-results-1_4_6_2-1
@@ -1258,7 +1332,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1276,6 +1350,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-2.results.profile)
     - name: path
       value: 1_4_6_2-32_320
   - name: tranform-workload-results-1_4_6_2-2
@@ -1303,7 +1379,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1321,6 +1397,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-3.results.profile)
     - name: path
       value: 1_4_6_2-64_640
   - name: tranform-workload-results-1_4_6_2-3
@@ -1348,7 +1426,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1366,6 +1444,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-4.results.profile)
     - name: path
       value: 1_4_6_2-128_1280
   - name: tranform-workload-results-1_4_6_2-4
@@ -1393,7 +1473,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1411,6 +1491,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-1_4_6_2-5.results.profile)
     - name: path
       value: 1_4_6_2-256_2560
   - name: tranform-workload-results-1_4_6_2-5
@@ -1459,9 +1541,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-4
   - name: download-model
     taskRef:
       name: download-model
@@ -1469,20 +1554,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-2_4_4_2
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-2_4_4_2
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -1491,6 +1579,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-4
       - routing.inferencePool.name="$(tasks.gaie-2_4_4_2.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-2_4_4_2.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-2_4_4_2.results.inferencepool)"
@@ -1505,7 +1596,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-2_4_4_2.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-4
   - name: create-workload-profile-2_4_4_2-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -1519,7 +1610,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1537,6 +1628,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-0.results.profile)
     - name: path
       value: 2_4_4_2-1_10
   - name: tranform-workload-results-2_4_4_2-0
@@ -1564,7 +1657,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1582,6 +1675,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-1.results.profile)
     - name: path
       value: 2_4_4_2-8_80
   - name: tranform-workload-results-2_4_4_2-1
@@ -1609,7 +1704,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1627,6 +1722,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-2.results.profile)
     - name: path
       value: 2_4_4_2-32_320
   - name: tranform-workload-results-2_4_4_2-2
@@ -1654,7 +1751,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1672,6 +1769,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-3.results.profile)
     - name: path
       value: 2_4_4_2-64_640
   - name: tranform-workload-results-2_4_4_2-3
@@ -1699,7 +1798,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1717,6 +1816,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-4.results.profile)
     - name: path
       value: 2_4_4_2-128_1280
   - name: tranform-workload-results-2_4_4_2-4
@@ -1744,7 +1845,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1762,6 +1863,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-2_4_4_2-5.results.profile)
     - name: path
       value: 2_4_4_2-256_2560
   - name: tranform-workload-results-2_4_4_2-5
@@ -1810,9 +1913,12 @@ spec:
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfc80>
+      value: <built-in method values of dict object at 0x103187f00>
     - name: version
       value: v1.0.1
+    - name: extraSets
+      value:
+      - inferencepool.matchLabels.ll-d.ai/model=llama-3-1-8b-instruct-5
   - name: download-model
     taskRef:
       name: download-model
@@ -1820,20 +1926,23 @@ spec:
     - name: model-cache
     params:
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: HF_TOKEN
   - name: deploy-model-3_4_2_2
     taskRef:
       name: deploy-helm
     runAfter:
     - download-model
+    results:
+    - name: serviceUrl
+      type: string
     params:
     - name: releaseName
       value: model-3_4_2_2
     - name: namespace
       value: $(params.namespace)
     - name: valuesObject
-      value: <built-in method values of dict object at 0x1029dfcc0>
+      value: <built-in method values of dict object at 0x1030f0d80>
     - name: version
       value: modelchartversion
     - name: repo
@@ -1842,6 +1951,9 @@ spec:
       value: https://llm-d-incubation.github.io/llm-d-modelservice/
     - name: extraSets
       value:
+      - modelArtifacts.name=meta-llama/Llama-3.1-8B-Instruct
+      - modelArtifacts.uri="pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct"
+      - fullnameOverride=llama-3-1-8b-instruct-5
       - routing.inferencePool.name="$(tasks.gaie-3_4_2_2.results.inferencepool)"
       - routing.httpRoute.rules[0].backendRefs[0].name="$(tasks.gaie-3_4_2_2.results.inferencepool)"
       - routing.httpRoute.rules[1].backendRefs[0].name="$(tasks.gaie-3_4_2_2.results.inferencepool)"
@@ -1856,7 +1968,7 @@ spec:
     - name: inferencepool
       value: $(tasks.deploy-gaie-3_4_2_2.results.inferencepool)
     - name: model_label
-      value: qwen-qwen3-0-6b
+      value: llama-3-1-8b-instruct-5
   - name: create-workload-profile-3_4_2_2-0
     taskRef:
       name: create-workload-profile-vllm-benchmark
@@ -1870,7 +1982,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1888,6 +2000,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-0.results.profile)
     - name: path
       value: 3_4_2_2-1_10
   - name: tranform-workload-results-3_4_2_2-0
@@ -1915,7 +2029,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1933,6 +2047,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-1.results.profile)
     - name: path
       value: 3_4_2_2-8_80
   - name: tranform-workload-results-3_4_2_2-1
@@ -1960,7 +2076,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -1978,6 +2094,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-2.results.profile)
     - name: path
       value: 3_4_2_2-32_320
   - name: tranform-workload-results-3_4_2_2-2
@@ -2005,7 +2123,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -2023,6 +2141,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-3.results.profile)
     - name: path
       value: 3_4_2_2-64_640
   - name: tranform-workload-results-3_4_2_2-3
@@ -2050,7 +2170,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -2068,6 +2188,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-4.results.profile)
     - name: path
       value: 3_4_2_2-128_1280
   - name: tranform-workload-results-3_4_2_2-4
@@ -2095,7 +2217,7 @@ spec:
     - name: profileTemplate
       value: random_concurrent.yaml
     - name: model
-      value: Qwen/Qwen3-0.6B
+      value: meta-llama/Llama-3.1-8B-Instruct
     - name: url
       value: url
     - name: treatment
@@ -2113,6 +2235,8 @@ spec:
     params:
     - name: harness
       value: vllm-benchmark
+    - name: profile
+      value: $(tasks.create-workload-profile-3_4_2_2-5.results.profile)
     - name: path
       value: 3_4_2_2-256_2560
   - name: tranform-workload-results-3_4_2_2-5

@@ -75,6 +75,8 @@ Installs vllm engines.
 
 **Outputs**:
 
+- *serviceUrl* - url for sending requests from within the cluster
+
 ### Task: `deploy-httproute`
 
 **Description:** 
@@ -101,8 +103,6 @@ Downloads model from HF to a locally mounted disk.
 - *path* - location to which the model should be downloaded
 
 **Outputs**:
-
-- *endpoint* - url for sending requests from within the cluster
 
 ## Run Workloads
 
