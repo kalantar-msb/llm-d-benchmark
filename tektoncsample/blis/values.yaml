@@ -1,0 +1,23 @@
+experiment:
+  name: blis-training
+  description: Training pipeline for BLIS scenario 5
+
+modelId: meta-llama/Llama-3.3-70B-Instruct
+
+stack:
+  treatments:
+    tensorParallelism:
+      - 1
+      - 2
+      - 4
+
+workload:
+  input_len: 10
+  output_len: 50
+
+upload_target:
+  type: s3
+  configuration:
+    bucket: cloud-object-storage-cos-standard-ere
+    endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+

@@ -1,0 +1,120 @@
+# PD disaggregation example benchmark
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: {{ experiment.name | dns }}
+spec:
+  {% if experiment.description is defined and experiment.description %}
+  description: {{ experiment.description }}
+  {% endif %}
+
+  workspaces:
+    - name: model-cache
+      description: Location where models are stored; shared by multiple model servers
+    - name: hf-credentials
+      description: Secret workspace containing a HuggingFace token
+    - name: data
+      description: Cache of training results
+    - name: target-credentials
+      description: >-
+        Secret workspace containing upload target credentials. 
+        For example, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
+    - name: scratch
+      description: Cache of code to be executed
+
+  params:
+    name: namespace
+    type: string
+    description: Kubernetes namespace where training will execute
+
+  tasks:
+    - name: download-model
+      taskRef: { name: download-model }
+      workspaces:
+        - name: model-cache
+        - name: hf-credentials
+      params:
+        - name: model
+          value: {{ modelId }}
+
+    # Loop: Run stacks (different model engine configurations) in parallel
+    - loopName: per-stack
+      foreach:
+        domain:
+          tp: {{ stack.treatments.tensorParallelism }}
+
+      vars:
+        stackId: "{{ tp }}"
+        stackModelLabel:  "{{ experiment.name | dns }}-{{ tp }}"
+
+      tasks:
+        - name: deploy-model-{{ stackId }}
+          description: >
+            Deploy the model and workload generator jointly using a Kubernetes Job.
+            Output is recorded on in the shared data workspace, also mounted by the workload generator pod.
+          taskRef: { name: deploy-model }
+          runAfter: [ "download-model" ]
+          params:
+            - { name: tp, value: "{{ tp }}" }
+            - { name: workspace, value: "data" }
+            - { name: input_len, value: {{ workload.input_len }} }
+            - { name: output_len, value: {{ workload.output_len }} }
+
+        - name: wait-for-completion-{{ stackId }}
+          description: Wait for the workload generation to complete.
+          taskRef: { name: wait-for-completion }
+          runAfter: [ "deploy-model-{{ stackId }}"]
+          params: []
+
+        - name: delete-model-{{ stackId }}
+          description: Delete the Job that launched the model engine and workload generator.
+          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          taskRef: { name: delete-model }
+
+        {% if upload_target is defined and upload_target %}
+        - name: raw-upload-{{ stackId }}
+          description: Upload the raw data to 
+          taskRef: { name: upload-{{ upload_target.type }} }
+          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          workspaces:
+            - name: data
+            - name: target-credentials
+          params:
+            - { name: dir, value: "{{experiment.name | dns }}-{{ stackId }}/raw" }
+            - { name: target, value: {{ upload_target.configuration }} }
+        {% endif %}
+
+        - name: process-data-{{ stackId }}
+          taskRef: { name: process-data }
+          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          workspaces:
+            - name: data
+            - name: scratch
+          params: []
+
+        {% if upload_target is defined and upload_target %}
+        - name: processed-upload-{{ stackId }}
+          taskRef: { name: update-{{ upload_target.type }} }
+          runAfter: [ "process-data-{{ stackId }}" ]
+          workspaces:
+            - name: data
+            - name: target-credentials
+          params:
+            - { name: dir, value: "{{experiment.name | dns }}-{{ stackId }}/processed" }
+            - { name: target, value: {{ upload_target.configuration }} }
+        {% endif %}
+
+  finally:
+    # Loop in 'finally': make all stacks are deleted when done
+    # Should we also delete results (assuming they were uploaded)
+    - loopName: cleanup
+      foreach:
+        domain:
+          tp: {{ stack.treatments.tensorParallelism }}
+
+      vars:
+        stackId: "{{ tp }}"
+
+      tasks:
+        - name: delete-model-{{ stackId }}
+          taskRef: { name: delete-model }

@@ -1,0 +1,258 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: blis-training
+spec:
+  description: Training pipeline for BLIS scenario 5
+  workspaces:
+  - name: model-cache
+    description: Location where models are stored; shared by multiple model servers
+  - name: hf-credentials
+    description: Secret workspace containing a HuggingFace token
+  - name: data
+    description: Cache of training results
+  - name: target-credentials
+    description: Secret workspace containing upload target credentials.  For example,
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
+  - name: scratch
+    description: Cache of code to be executed
+  params:
+    name: namespace
+    type: string
+    description: Kubernetes namespace where training will execute
+  tasks:
+  - name: download-model
+    taskRef:
+      name: download-model
+    workspaces:
+    - name: model-cache
+    - name: hf-credentials
+    params:
+    - name: model
+      value: meta-llama/Llama-3.3-70B-Instruct
+  - name: deploy-model-1
+    description: 'Deploy the model and workload generator jointly using a Kubernetes
+      Job. Output is recorded on in the shared data workspace, also mounted by the
+      workload generator pod.
+
+      '
+    taskRef:
+      name: deploy-model
+    runAfter:
+    - download-model
+    params:
+    - name: tp
+      value: '1'
+    - name: workspace
+      value: data
+    - name: input_len
+      value: 10
+    - name: output_len
+      value: 50
+  - name: wait-for-completion-1
+    description: Wait for the workload generation to complete.
+    taskRef:
+      name: wait-for-completion
+    runAfter:
+    - deploy-model-1
+    params: []
+  - name: delete-model-1
+    description: Delete the Job that launched the model engine and workload generator.
+    runAfter:
+    - wait-for-completion-1
+    taskRef:
+      name: delete-model
+  - name: raw-upload-1
+    description: Upload the raw data to
+    taskRef:
+      name: upload-s3
+    runAfter:
+    - wait-for-completion-1
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-1/raw
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  - name: process-data-1
+    taskRef:
+      name: process-data
+    runAfter:
+    - wait-for-completion-1
+    workspaces:
+    - name: data
+    - name: scratch
+    params: []
+  - name: processed-upload-1
+    taskRef:
+      name: update-s3
+    runAfter:
+    - process-data-1
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-1/processed
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  - name: deploy-model-2
+    description: 'Deploy the model and workload generator jointly using a Kubernetes
+      Job. Output is recorded on in the shared data workspace, also mounted by the
+      workload generator pod.
+
+      '
+    taskRef:
+      name: deploy-model
+    runAfter:
+    - download-model
+    params:
+    - name: tp
+      value: '2'
+    - name: workspace
+      value: data
+    - name: input_len
+      value: 10
+    - name: output_len
+      value: 50
+  - name: wait-for-completion-2
+    description: Wait for the workload generation to complete.
+    taskRef:
+      name: wait-for-completion
+    runAfter:
+    - deploy-model-2
+    params: []
+  - name: delete-model-2
+    description: Delete the Job that launched the model engine and workload generator.
+    runAfter:
+    - wait-for-completion-2
+    taskRef:
+      name: delete-model
+  - name: raw-upload-2
+    description: Upload the raw data to
+    taskRef:
+      name: upload-s3
+    runAfter:
+    - wait-for-completion-2
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-2/raw
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  - name: process-data-2
+    taskRef:
+      name: process-data
+    runAfter:
+    - wait-for-completion-2
+    workspaces:
+    - name: data
+    - name: scratch
+    params: []
+  - name: processed-upload-2
+    taskRef:
+      name: update-s3
+    runAfter:
+    - process-data-2
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-2/processed
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  - name: deploy-model-4
+    description: 'Deploy the model and workload generator jointly using a Kubernetes
+      Job. Output is recorded on in the shared data workspace, also mounted by the
+      workload generator pod.
+
+      '
+    taskRef:
+      name: deploy-model
+    runAfter:
+    - download-model
+    params:
+    - name: tp
+      value: '4'
+    - name: workspace
+      value: data
+    - name: input_len
+      value: 10
+    - name: output_len
+      value: 50
+  - name: wait-for-completion-4
+    description: Wait for the workload generation to complete.
+    taskRef:
+      name: wait-for-completion
+    runAfter:
+    - deploy-model-4
+    params: []
+  - name: delete-model-4
+    description: Delete the Job that launched the model engine and workload generator.
+    runAfter:
+    - wait-for-completion-4
+    taskRef:
+      name: delete-model
+  - name: raw-upload-4
+    description: Upload the raw data to
+    taskRef:
+      name: upload-s3
+    runAfter:
+    - wait-for-completion-4
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-4/raw
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  - name: process-data-4
+    taskRef:
+      name: process-data
+    runAfter:
+    - wait-for-completion-4
+    workspaces:
+    - name: data
+    - name: scratch
+    params: []
+  - name: processed-upload-4
+    taskRef:
+      name: update-s3
+    runAfter:
+    - process-data-4
+    workspaces:
+    - name: data
+    - name: target-credentials
+    params:
+    - name: dir
+      value: blis-training-4/processed
+    - name: target
+      value:
+        bucket: cloud-object-storage-cos-standard-ere
+        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
+  finally:
+  - name: delete-model-1
+    taskRef:
+      name: delete-model
+  - name: delete-model-2
+    taskRef:
+      name: delete-model
+  - name: delete-model-4
+    taskRef:
+      name: delete-model
