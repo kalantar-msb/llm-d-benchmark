@@ -49,21 +49,33 @@ spec:
       value: 10
     - name: output_len
       value: 50
-  - name: wait-for-completion-1
+  - name: wait-for-model-1
     description: Wait for the workload generation to complete.
     taskRef:
       name: wait-for-completion
     runAfter:
     - deploy-model-1
     params: []
+  - name: create-workload-profile-1
+    description: Create workload profile for workload harness.
+    taskRef:
+      name: create-workload-profile
+    runAfter:
+    - wait-for-model-1
+  - name: run-workload-1
+    description: Run workload against model server.
+    taskRef:
+      name: run-workload-guidellm
+    runAfter:
+    - create-workload-profile-1
   - name: delete-model-1
     description: Delete the Job that launched the model engine and workload generator.
     runAfter:
-    - wait-for-completion-1
+    - run-workload-1
     taskRef:
       name: delete-model
   - name: raw-upload-1
-    description: Upload the raw data to
+    description: Upload raw data to target data repository
     taskRef:
       name: upload-s3
     runAfter:
@@ -88,6 +100,7 @@ spec:
     - name: scratch
     params: []
   - name: processed-upload-1
+    description: Upload
     taskRef:
       name: update-s3
     runAfter:
@@ -121,21 +134,33 @@ spec:
       value: 10
     - name: output_len
       value: 50
-  - name: wait-for-completion-2
+  - name: wait-for-model-2
     description: Wait for the workload generation to complete.
     taskRef:
       name: wait-for-completion
     runAfter:
     - deploy-model-2
     params: []
+  - name: create-workload-profile-2
+    description: Create workload profile for workload harness.
+    taskRef:
+      name: create-workload-profile
+    runAfter:
+    - wait-for-model-2
+  - name: run-workload-2
+    description: Run workload against model server.
+    taskRef:
+      name: run-workload-guidellm
+    runAfter:
+    - create-workload-profile-2
   - name: delete-model-2
     description: Delete the Job that launched the model engine and workload generator.
     runAfter:
-    - wait-for-completion-2
+    - run-workload-2
     taskRef:
       name: delete-model
   - name: raw-upload-2
-    description: Upload the raw data to
+    description: Upload raw data to target data repository
     taskRef:
       name: upload-s3
     runAfter:
@@ -160,6 +185,7 @@ spec:
     - name: scratch
     params: []
   - name: processed-upload-2
+    description: Upload
     taskRef:
       name: update-s3
     runAfter:
@@ -193,21 +219,33 @@ spec:
       value: 10
     - name: output_len
       value: 50
-  - name: wait-for-completion-4
+  - name: wait-for-model-4
     description: Wait for the workload generation to complete.
     taskRef:
       name: wait-for-completion
     runAfter:
     - deploy-model-4
     params: []
+  - name: create-workload-profile-4
+    description: Create workload profile for workload harness.
+    taskRef:
+      name: create-workload-profile
+    runAfter:
+    - wait-for-model-4
+  - name: run-workload-4
+    description: Run workload against model server.
+    taskRef:
+      name: run-workload-guidellm
+    runAfter:
+    - create-workload-profile-4
   - name: delete-model-4
     description: Delete the Job that launched the model engine and workload generator.
     runAfter:
-    - wait-for-completion-4
+    - run-workload-4
     taskRef:
       name: delete-model
   - name: raw-upload-4
-    description: Upload the raw data to
+    description: Upload raw data to target data repository
     taskRef:
       name: upload-s3
     runAfter:
@@ -232,6 +270,7 @@ spec:
     - name: scratch
     params: []
   - name: processed-upload-4
+    description: Upload
     taskRef:
       name: update-s3
     runAfter:

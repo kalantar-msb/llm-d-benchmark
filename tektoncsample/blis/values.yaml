@@ -12,6 +12,7 @@ stack:
       - 4
 
 workload:
+  harness: guidellm
   input_len: 10
   output_len: 50
 

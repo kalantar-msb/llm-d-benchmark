@@ -60,20 +60,30 @@ spec:
             - { name: input_len, value: {{ workload.input_len }} }
             - { name: output_len, value: {{ workload.output_len }} }
 
-        - name: wait-for-completion-{{ stackId }}
+        - name: wait-for-model-{{ stackId }}
           description: Wait for the workload generation to complete.
           taskRef: { name: wait-for-completion }
           runAfter: [ "deploy-model-{{ stackId }}"]
           params: []
 
+        - name: create-workload-profile-{{ stackId }}
+          description: Create workload profile for workload harness.
+          taskRef: { name: create-workload-profile }
+          runAfter: [ "wait-for-model-{{ stackId }}" ]
+
+        - name: run-workload-{{ stackId }}
+          description: Run workload against model server.
+          taskRef: { name: run-workload-{{ workload.harness }} }
+          runAfter: [ "create-workload-profile-{{ stackId }}" ]
+
         - name: delete-model-{{ stackId }}
           description: Delete the Job that launched the model engine and workload generator.
-          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          runAfter: [ "run-workload-{{ stackId }}" ]
           taskRef: { name: delete-model }
 
         {% if upload_target is defined and upload_target %}
         - name: raw-upload-{{ stackId }}
-          description: Upload the raw data to 
+          description: Upload raw data to target data repository 
           taskRef: { name: upload-{{ upload_target.type }} }
           runAfter: [ "wait-for-completion-{{ stackId }}" ]
           workspaces:
@@ -94,6 +104,7 @@ spec:
 
         {% if upload_target is defined and upload_target %}
         - name: processed-upload-{{ stackId }}
+          description: Upload 
           taskRef: { name: update-{{ upload_target.type }} }
           runAfter: [ "process-data-{{ stackId }}" ]
           workspaces:
@@ -104,9 +115,11 @@ spec:
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
+        # should we delete results from shared data workspace?
+
   finally:
     # Loop in 'finally': make all stacks are deleted when done
-    # Should we also delete results (assuming they were uploaded)
+    # Should we also delete results?
     - loopName: cleanup
       foreach:
         domain:
