@@ -1,0 +1,61 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: create-workload-profile-vllm-benchmark
+spec:
+  description: |
+    Create a workload profile from a template.
+
+  workspaces:
+    - name: data
+      mountPath: /results
+      
+  params:
+    - name: harness
+      type: string
+    - name: profileTemplate
+      type: object
+    - name: model
+      type: string
+    - name: url
+      type: string
+    - name: treatment
+      type: string
+    - name: overrides
+      type: string
+
+  steps:
+    - name: document-params
+      image: python:3.12.9-slim-bookworm
+      script: |
+        #!/bin/sh
+        set -eu
+
+        echo ">>> harness"
+        echo "$(params.harness)"
+        echo ">>> profileTemplate"
+        printf "%s" "$(params.profileTemplate)"
+        echo ">>> model"
+        echo "$(params.model)"
+        echo ">>> url"
+        echo "$(params.url)"
+
+        # Install required software
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          curl \
+          wget \
+          ca-certificates \
+          jq \
+          && apt-get clean && rm -rf /var/cache/apt
+        curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
+          -o /usr/local/bin/yq
+
+        echo ">>> profileTemplate"
+        echo "$(params.profileTemplate)"
+
+        echo "run jq"
+        echo "$(params.profileTemplate)" | jq '.'
+
+        echo "run jq 2"
+        echo "$(params.profileTemplate)" | jq -c '."random_concurrent.yaml"'

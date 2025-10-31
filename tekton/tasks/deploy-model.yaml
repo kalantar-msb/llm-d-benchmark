@@ -1,0 +1,82 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-model
+spec:
+  description: |
+    Deploy Kubernetes Gateway API Inference Extension.
+      
+  params:
+    - name: namespace
+      type: string
+      description: Namespace in which to upgrade/install the chart
+    - name: releaseName
+      type: string
+    - name: values
+      type: string
+    - name: extraSets
+      type: array
+      default: []
+    - name: extraValues
+      type: string
+      default: ""
+
+  steps:
+    - name: document
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo ">>> namespace"
+        echo "$(params.namespace)"
+        echo ">>> releaseName"
+        echo "$(params.releaseName)"
+        echo ">>> values"
+        printf "%s" "$(params.values)"
+
+        echo ">>> extraValues"
+        printf "%s" "$(params.values)"
+
+    - name: build-sets
+      image: python:3.11-slim
+      command: ["python", "-c"]
+      args:
+        - |
+          import sys, os
+          combined = " ".join(sys.argv[1:]).strip()
+          items = combined.split() if combined else []
+          flags = " ".join(f"--set {i}" for i in items)
+          print("SETS:", flags)
+          with open(os.environ["TEKTON_RESULT_PATH"], "w", encoding="utf-8") as f:
+              f.write(flags)
+        - "$(params.extraSets[*])"
+      env:
+        - name: TEKTON_RESULT_PATH
+          value: "$(step.results.sets.path)"
+      results: 
+        - name: sets
+
+    - name: install-model
+      ref: 
+        name: helm-upgrade-install
+      params:
+        - name: releaseName
+          value: $(params.releaseName)
+
+        - name: chart
+          value: llm-d-modelservice/llm-d-modelservice
+        - name: repoName
+          value: llm-d-modelservice
+        - name: repoUrl
+          value: https://llm-d-incubation.github.io/llm-d-modelservice/
+
+        - name: namespace
+          value: $(params.namespace)
+        - name: timeout
+          value: 15m
+        - name: valuesYaml
+          value: "$(params.values)"
+        - name: extraArgs
+          value: "$(steps.build-sets.results.sets)"
+        - name: extraValues
+          value: "$(params.extraValues)"

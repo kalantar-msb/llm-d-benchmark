@@ -1,0 +1,49 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-gateway
+spec:
+  description: |
+    Deploy a gateway.
+
+  params:
+    - name: namespace
+      type: string
+      description: Namespace in which to upgrade/install the chart
+    - name: releaseName
+      type: string
+    - name: values
+      type: string
+
+  results:
+    - name: gateway
+      description: name of gateway
+
+  steps:
+    - name: install-gateway
+      ref: 
+        name: helm-upgrade-install
+      params:
+        - name: releaseName
+          value: $(params.releaseName)
+        - name: chart
+          value: llm-d-infra/llm-d-infra
+        - name: repoName
+          value: llm-d-infra
+        - name: repoUrl
+          value: https://llm-d-incubation.github.io/llm-d-infra/
+        
+        - name: namespace
+          value: $(params.namespace)
+        - name: timeout
+          value: 15m
+        - name: valuesYaml
+          value: "$(params.values)"
+
+    - name: record-results
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        RELEASE="$(params.releaseName)"
+        printf "%s" "${RELEASE}-infrastructure-gateway" > $(results.gateway.path)

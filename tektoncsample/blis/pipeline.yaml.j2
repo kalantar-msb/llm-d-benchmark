@@ -56,9 +56,25 @@ spec:
           runAfter: [ "download-model" ]
           params:
             - { name: tp, value: "{{ tp }}" }
-            - { name: workspace, value: "data" }
-            - { name: input_len, value: {{ workload.input_len }} }
-            - { name: output_len, value: {{ workload.output_len }} }
+
+        - name: deploy-model-{{ stackId }}
+          taskRef: { name: deploy-model }
+          runAfter: [ "download-model" ]
+          params:
+            - { name: releaseName, value: "model-{{ stackId }}" }
+            - { name: namespace , value: $(params.namespace) }
+            - { name: values, value: {{ stack.model.helmValues }} }
+            - name: extraValues
+              value:
+                modelArtifacts:
+                  labels:
+                    llm-d.ai/model: "{{ stackModelLabel }}"
+            - name: extraSets
+              value:
+                - decode.parallelism.tensor={{ tp }}
+                - modelArtifacts.name={{ modelId }}
+                - modelArtifacts.uri=pvc://model-pvc/models/{{ modelId }}
+                - fullnameOverride={{ stackModelLabel }}
 
         - name: wait-for-model-{{ stackId }}
           description: Wait for the workload generation to complete.
@@ -85,7 +101,7 @@ spec:
         - name: raw-upload-{{ stackId }}
           description: Upload raw data to target data repository 
           taskRef: { name: upload-{{ upload_target.type }} }
-          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          runAfter: [ "run-workload-{{ stackId }}" ]
           workspaces:
             - name: data
             - name: target-credentials
@@ -96,7 +112,7 @@ spec:
 
         - name: process-data-{{ stackId }}
           taskRef: { name: process-data }
-          runAfter: [ "wait-for-completion-{{ stackId }}" ]
+          runAfter: [ "run-workload-{{ stackId }}" ]
           workspaces:
             - name: data
             - name: scratch
