@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: delete-model
+spec:
+  description: |
+    Delete model engines
+  steps:
+    - name: placeholder
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "delete-model called"

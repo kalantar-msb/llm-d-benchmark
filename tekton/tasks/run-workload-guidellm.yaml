@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-workload-guidellm
+spec:
+  description: |
+    Run workload using guidellm.
+  steps:
+    - name: placeholder
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "run-workload-guidellm called"

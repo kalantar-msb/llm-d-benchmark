@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: process-data
+spec:
+  description: |
+    Delete model engines
+  
+  workspaces:
+    - name: data
+  
+  steps:
+    - name: placeholder
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "process-data called"

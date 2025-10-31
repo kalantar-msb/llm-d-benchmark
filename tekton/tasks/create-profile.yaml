@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: create-workload-profile-vllm-benchmark
+  name: create-workload-profile
 spec:
   description: |
     Create a workload profile from a template.
@@ -14,7 +14,7 @@ spec:
     - name: harness
       type: string
     - name: profileTemplate
-      type: object
+      type: string
     - name: model
       type: string
     - name: url
@@ -27,6 +27,9 @@ spec:
   steps:
     - name: document-params
       image: python:3.12.9-slim-bookworm
+      env:
+        - { name: HARNESS, value: "$(params.harness)" }
+        - { name: WORKLOAD_PROFILE, value: "$(params.profileTemplate)" }
       script: |
         #!/bin/sh
         set -eu
@@ -51,11 +54,8 @@ spec:
         curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
           -o /usr/local/bin/yq
 
-        echo ">>> profileTemplate"
-        echo "$(params.profileTemplate)"
-
-        echo "run jq"
-        echo "$(params.profileTemplate)" | jq '.'
-
-        echo "run jq 2"
-        echo "$(params.profileTemplate)" | jq -c '."random_concurrent.yaml"'
+        # echo "🔄 Fetch workload profile"
+        # # Fetch profile template from llmd-benchmark
+        # wget -O ${workload_template_path} \
+        # --quiet \
+        #   https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/workload/profiles/${HARNESS_NAME}/${workload_template}

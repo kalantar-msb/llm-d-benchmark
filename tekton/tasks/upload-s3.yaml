@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: upload-s3
+spec:
+  description: |
+    Upload data to an s3 bucket.
+
+  workspaces:
+    - name: data
+    - name: target-credentials
+    
+  steps:
+    - name: placeholder
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "upload-s3 called"
