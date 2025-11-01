@@ -3,40 +3,45 @@ kind: Task
 metadata:
   name: deploy-model
 spec:
-  description: |
-    Deploy Kubernetes Gateway API Inference Extension.
-      
+  description: >-
+    Deploy model engines (vllm) using the modelservice helm chart.
+    Configuration is expressed using three mechanisms:
+    (a) params.config, a helm values file (typically a common, default configuration); 
+    (b) params.configOverride, an optional helm values file that overrides params.config; and 
+    (c) params.overrides, an optional list of strings of the form path=value of overrides.
+    This task converts any params.overrides into helm --set options.
+    This task automaticaly adds overrides for fullnameOverride, modelArtifacts.name, 
+    modelArtifacts.uri and modelArtifacts.labels."llm-d.ai/model".
+    Finally, this chart waits for the model engines to be ready.
+  
+  workspaces:
+    - name: model-cache
+
   params:
+    - name: config
+      type: string
+    - name: configOverrides
+      type: string
+      default: ""
+    - name: overrides
+      type: array
+      default: []
+
+    - name: model
+      type: string
+    - name: modelLabel
+      type: string
+    - name: decodeReplicas
+      default: 0
+    - name: prefillReplicas
+      default: 0
     - name: namespace
       type: string
       description: Namespace in which to upgrade/install the chart
-    - name: releaseName
-      type: string
-    - name: values
-      type: string
-    - name: extraSets
-      type: array
-      default: []
-    - name: extraValues
-      type: string
-      default: ""
+    - name: timeout
+      default: 300
 
   steps:
-    - name: document
-      image: alpine:3.20
-      script: |
-        #!/bin/sh
-        set -eu
-        echo ">>> namespace"
-        echo "$(params.namespace)"
-        echo ">>> releaseName"
-        echo "$(params.releaseName)"
-        echo ">>> values"
-        printf "%s" "$(params.values)"
-
-        echo ">>> extraValues"
-        printf "%s" "$(params.values)"
-
     - name: build-sets
       image: python:3.11-slim
       command: ["python", "-c"]
@@ -45,14 +50,19 @@ spec:
           import sys, os
           combined = " ".join(sys.argv[1:]).strip()
           items = combined.split() if combined else []
+          items.append(f'fullnameOverride={os.environ["MODEL_LABEL"]}')
+          items.append(f'modelArtifacts.name={os.environ["MODEL"]}')
+          items.append(f'modelArtifacts.uri=pvc://{os.environ["MODEL_PVC_CLAIM"]}/models/{os.environ["MODEL"]}')
           flags = " ".join(f"--set {i}" for i in items)
           print("SETS:", flags)
           with open(os.environ["TEKTON_RESULT_PATH"], "w", encoding="utf-8") as f:
               f.write(flags)
-        - "$(params.extraSets[*])"
+        - "$(params.overrides[*])"
       env:
-        - name: TEKTON_RESULT_PATH
-          value: "$(step.results.sets.path)"
+        - { name: MODEL, value: "$(params.model)" }
+        - { name: MODEL_LABEL, value: "$(params.modelLabel)" }
+        - { name: MODEL_PVC_CLAIM, value: "$(workspaces.model-cache.claim)" }
+        - { name: TEKTON_RESULT_PATH, value: "$(step.results.sets.path)" }
       results: 
         - name: sets
 
@@ -61,7 +71,7 @@ spec:
         name: helm-upgrade-install
       params:
         - name: releaseName
-          value: $(params.releaseName)
+          value: $(params.modelLabel)-model
 
         - name: chart
           value: llm-d-modelservice/llm-d-modelservice
@@ -75,41 +85,36 @@ spec:
         - name: timeout
           value: 15m
         - name: valuesYaml
-          value: "$(params.values)"
+          value: "$(params.config)"
         - name: extraArgs
           value: "$(steps.build-sets.results.sets)"
         - name: extraValues
-          value: "$(params.extraValues)"
+          value: "$(params.configOverrides)"
 
     - name: wait-for-model
       env:
-        - name: DECODE_REPLICAS
-          value: $(steps.compute-capacity-validation-values.results.decodeReplicas)
-        - name: PREFILL_REPLICAS
-          value: $(steps.compute-capacity-validation-values.results.prefillReplicas)
+        - { name: DECODE_REPLICAS, value: $(params.decodeReplicas) }
+        - { name: PREFILL_REPLICAS, value: $(params.prefillReplicas) }
+        - { name: MODEL, value: "$(params.model)" }
+        - { name: MODEL_LABEL, value: "$(params.modelLabel)" }
+        - { name: NAMESPACE, value: "$(params.namespace)" }
+        - { name: START_TIMEOUT, value: "$(params.timeout)" }
       image: alpine/kubectl:1.34.1
       script: |
         #!/bin/sh
-        
-        if [ "$(params.dry-run)" = "true" ]; then
-          echo ">> skipping"
-          exit 0
-        fi
-        NAMESPACE="$(params.targetNamespacePrefix)-$(context.taskRun.name)"
-        MODEL_ID="$(params.model-id)"
-        MODEL_LABEL=$(echo "$MODEL_ID" | tr '[:upper:]' '[:lower:]' | sed 's/[./]/-/g')
-        MODEL_START_TIMEOUT="$(params.modelWaitTimeout)"
 
-        echo "⏳ Waiting for pods serving model ${MODEL_ID} to be 'Running'"
-        echo "Model label = ${MODEL_LABEL}"
+        echo "⏳ Waiting for pods serving model ${MODEL} to be 'Running' (label = ${MODEL_LABEL})"
+        echo "# decode replicas = ${DECODE_REPLICAS}"
+        echo "# prefill replicas = ${PREFILL_REPLICAS}"
+        echo "timeout = ${START_TIMEOUT}"
 
         if [ ${DECODE_REPLICAS} -gt 0 ]; then
           kubectl --namespace ${NAMESPACE} \
             wait pod \
               -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=decode \
               --for=create \
-              --timeout=${MODEL_START_TIMEOUT}s
-          echo "✅ (decode) pods serving model ${MODEL_ID} created"
+              --timeout=${START_TIMEOUT}s
+          echo "✅ (decode) pods serving model ${MODEL} created (label = ${MODEL_LABEL})"
         fi
  
         if [ ${PREFILL_REPLICAS} -gt 0 ]; then
@@ -117,17 +122,19 @@ spec:
             wait pod \
               -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=prefill \
               --for=create \
-              --timeout=${MODEL_START_TIMEOUT}s
-          echo "✅ prefill pods serving model ${MODEL_ID} created"
+              --timeout=${START_TIMEOUT}s
+          echo "✅ prefill pods serving model ${MODEL} created (label = ${MODEL_LABEL})"
         fi
+
+        echo "⏳ Waiting for pods serving model ${MODEL} to be 'Ready' (label = ${MODEL_LABEL})"
 
         if [ ${DECODE_REPLICAS} -gt 0 ]; then
           kubectl --namespace ${NAMESPACE} \
             wait pod \
               -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=decode \
               --for=condition=Ready=True \
-              --timeout=${MODEL_START_TIMEOUT}s
-          echo "✅ (decode) pods serving model ${MODEL_ID} ready"
+              --timeout=${START_TIMEOUT}s
+          echo "✅ (decode) pods serving model ${MODEL} ready (label = ${MODEL_LABEL})"
         fi
 
         if [ ${PREFILL_REPLICAS} -gt 0 ]; then
@@ -135,6 +142,6 @@ spec:
           wait pod \
             -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=prefill \
             --for=condition=Ready=True \
-            --timeout=${MODEL_START_TIMEOUT}s
-          echo "✅ prefill pods serving model ${MODEL_ID} ready"
+            --timeout=${START_TIMEOUT}s
+          echo "✅ prefill pods serving model ${MODEL} ready (label = ${MODEL_LABEL})"
         fi
