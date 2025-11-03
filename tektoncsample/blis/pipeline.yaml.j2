@@ -66,14 +66,7 @@ spec:
           params:
             - { name: model, value: $(params.model) }
             - { name: modelLabel, value: "{{ stackModelLabel }}"}
-            {% set enabled = stack.model.helmValues.decode.create | default(true) %}
-            {% set replicas = stack.model.helmValues.decode.replicas | default(1) %}
-            - { name: decodeReplicas, value: {{ 0 if enabled == false else replicas }} }
-            {% set enabled = stack.model.helmValues.prefill.create | default(true) %}
-            {% set replicas = stack.model.helmValues.prefill.replicas | default(1) %}
-            - { name: prefillReplicas, value: {{ 0 if enabled == false else replicas }} }
             - { name: namespace , value: $(params.namespace) }
-
             - { name: config, value: {{ stack.model.helmValues }} }
             - name: configOverrides
               value:
