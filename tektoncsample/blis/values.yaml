@@ -51,8 +51,8 @@ stack:
             - "16"
             # - "--tensor-parallel-size"
             # - "1"
-            - "--max-model-len"
-            - "16000" 
+            # - "--max-model-len"
+            # - "16000" 
             - "--max-num-batched-tokens"
             - "8192" 
 

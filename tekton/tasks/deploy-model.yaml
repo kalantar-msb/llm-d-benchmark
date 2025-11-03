@@ -78,6 +78,14 @@ spec:
     #       'opentelemetry-exporter-otlp>=1.26.0,<1.27.0' \
     #       'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0'
 
+    - name: set-permission
+      image: quay.io/openshift/origin-cli:4.21
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "Let's set things right"
+        oc adm policy add-scc-to-user anyuid -z $(params.modelLabel) -n $(params.namespace)
+
     - name: install-model
       ref: 
         name: helm-upgrade-install
@@ -115,6 +123,7 @@ spec:
       script: |
         #!/bin/sh
         set -eu
+        
         
         echo "⏳ Waiting for pods serving model ${MODEL} to be 'Running' (label = ${MODEL_LABEL})"
         echo "# decode replicas = ${DECODE_REPLICAS}"

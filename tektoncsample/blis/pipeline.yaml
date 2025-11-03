@@ -91,8 +91,6 @@ spec:
             args:
             - --block-size
             - '16'
-            - --max-model-len
-            - '16000'
             - --max-num-batched-tokens
             - '8192'
             resources:
@@ -268,8 +266,6 @@ spec:
             args:
             - --block-size
             - '16'
-            - --max-model-len
-            - '16000'
             - --max-num-batched-tokens
             - '8192'
             resources:
@@ -445,8 +441,6 @@ spec:
             args:
             - --block-size
             - '16'
-            - --max-model-len
-            - '16000'
             - --max-num-batched-tokens
             - '8192'
             resources:

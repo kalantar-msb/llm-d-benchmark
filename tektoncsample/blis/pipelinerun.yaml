@@ -30,8 +30,8 @@ spec:
     name: blis-training
   params:
     - name: namespace
-      value: toslali
+      value: mert
     - name: experimentId
-      value: michaelmert
+      value: works
     - name: model
-      value: Qwen/Qwen2.5-0.5B
+      value: Qwen/Qwen2.5-Math-1.5B
