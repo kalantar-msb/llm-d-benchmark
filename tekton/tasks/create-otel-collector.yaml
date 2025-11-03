@@ -1,0 +1,110 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-otel-collector
+spec:
+  description: |
+    Deploy a per-experiment OpenTelemetry collector that writes raw traces
+    to /workspace/data-pvc/<experimentId>/traces.json
+
+  params:
+    - name: experimentId
+      type: string
+      description: "Unique experiment ID, e.g., exp123"
+
+  workspaces:
+    - name: data-pvc
+      description: "PVC where traces will be stored at /workspace/data-pvc/<experimentId>"
+
+  steps:
+    - name: deploy-collector
+      image: bitnami/kubectl:latest
+      script: |
+        #!/bin/sh
+        set -e
+
+        EXP="$(params.experimentId)"
+        TRACE_DIR="/workspace/data-pvc/${EXP}"
+
+        echo "Creating directory for experiment traces: $TRACE_DIR"
+        mkdir -p "$TRACE_DIR"
+
+        echo "Deploying OTEL collector for experiment: $EXP"
+
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: otel-${EXP}-config
+        data:
+          otel-config.yaml: |
+            receivers:
+              otlp:
+                protocols:
+                  grpc:
+                    endpoint: 0.0.0.0:4317
+                  http:
+                    endpoint: 0.0.0.0:4318
+            processors:
+              batch:
+            exporters:
+              file:
+                path: /workspace/data-pvc/${EXP}/traces.json
+            service:
+              pipelines:
+                traces:
+                  receivers: [otlp]
+                  processors: [batch]
+                  exporters: [file]
+
+        ---
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: otel-${EXP}
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: otel-${EXP}
+          template:
+            metadata:
+              labels:
+                app: otel-${EXP}
+            spec:
+              containers:
+              - name: otel-collector
+                image: otel/opentelemetry-collector:latest
+                args:
+                  - "--config=/etc/otel/otel-config.yaml"
+                volumeMounts:
+                - name: otel-config
+                  mountPath: /etc/otel/
+                - name: data-storage
+                  mountPath: /workspace/data-pvc
+              volumes:
+              - name: otel-config
+                configMap:
+                  name: otel-${EXP}-config
+              - name: data-storage
+                persistentVolumeClaim:
+                  claimName: data-pvc
+
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: otel-${EXP}
+        spec:
+          selector:
+            app: otel-${EXP}
+          ports:
+          - name: grpc
+            port: 4317
+            targetPort: 4317
+          - name: http
+            port: 4318
+            targetPort: 4318
+        EOF
+
+        echo "OTEL collector deployed for experiment: $EXP"
