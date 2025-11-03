@@ -31,3 +31,7 @@ spec:
   params:
     - name: namespace
       value: toslali
+    - name: experimentId
+      value: michaelmert
+    - name: model
+      value: Qwen/Qwen2.5-0.5B

@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: create-blis-workload-profile
+  name: create-workload-profile
 spec:
   description: |
     Create a workload profile for BLIS.
@@ -25,16 +25,51 @@ spec:
       description: Workload profile configuration file
 
   steps:
-    - name: document-params
+    - name: create-profile
       image: alpine:3.20
       script: |
         #!/bin/sh
         set -eu
 
         cat <<EOF > $(results.profile.path)
-        target: "$(prams.targetUrl)"
-        rate-type: concurrent
-        rate: 2
-        max-seconds: 30
-        data: prompt_tokens=256,output_tokens=128
+        target: "$(params.targetUrl)"
+        rate-type: sweep
+        max-requests: 20 
+        # max-requests: 2000
+        random-seed: 42
+        warmup-percent: 0.1 
+        data: 
+          prompt_tokens: 500
+          prompt_tokens_stdev: 256
+          prompt_tokens_min: 2
+          prompt_tokens_max: 8192
+          output_tokens: 500
+          output_tokens_stdev: 56 
+          output_tokens_min: 1
+          output_tokens_max: 8192
+
+        output-path: /mnt/demo_results.json
+
+        # --request-formatter-kwargs '{"stream": false}' 
         EOF
+
+    - name: log-profile
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "B sees r as: $(cat $(results.profile.path))"
+
+
+
+
+# guidellm benchmark \
+#     --target "http://localhost:8000" \
+#     --rate-type "sweep" \
+#     --max-requests 2000 \
+#     --random-seed 42 \
+#     --warmup-percent 0.1 \
+#     --data '{"prompt_tokens": 500, "prompt_tokens_stdev": 256, "prompt_tokens_min": 2, "prompt_tokens_max": 8192, "output_tokens": 500, "output_tokens_stdev": 256, "output_tokens_min": 1, "output_tokens_max": 8192}' \
+#     --output-path /mnt/demo_results.json \
+#     --display-scheduler-stats \
+#     --request-formatter-kwargs '{"stream": false}' \

@@ -81,13 +81,11 @@ spec:
           description: Create workload profile for workload harness.
           taskRef: { name: create-workload-profile }
           runAfter: [ "deploy-model-{{ stackId }}" ]
-          workspaces:
-            - name: data
           params:
             - { name: harness, value: "{{ workload.harness }}" }
             - { name: profileTemplate, value: "sanity_concurrent" }
             - { name: model, value: "$(params.model)" }
-            - { name: url, value: "url" }
+            - { name: targetUrl, value: "url" }
             - name: overrides
               value: ""
 

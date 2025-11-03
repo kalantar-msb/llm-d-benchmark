@@ -1,102 +1,102 @@
-# apiVersion: tekton.dev/v1
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-workload-guidellm
+spec:
+  description: |
+    Run workload using guidellm.
+  steps:
+    - name: placeholder
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+        echo "run-workload-guidellm called"
+
+
+
+
+# apiVersion: tekton.dev/v1beta1
 # kind: Task
 # metadata:
 #   name: run-workload-guidellm
 # spec:
-#   description: |
-#     Run workload using guidellm.
-#   steps:
-#     - name: placeholder
-#       image: alpine:3.20
-#       script: |
-#         #!/bin/sh
-#         set -eu
-#         echo "run-workload-guidellm called"
+#   params:
+#     - name: harnessName
+#     - name: harnessProfile
+#     - name: pipelineUID
+#   env:
+#     - name: REQUESTED_HARNESS_NAME
+#       value: "$(params.harnessName)"
+#     - name: MY_HARNESS_NAME
+#       value: "guidellm"
+#     - name: HARNESS_PROFILE
+#       value: "$(params.harnessProfile)"
 
+#     - name: GIT_REPO_URL
+#       value: "https://github.com/vllm-project/guidellm.git"
+#     - name: GIT_REVISION
+#       value: "main"
+#     - name: GIT_COMMIT
+#       value: "ba51acf5b0ba377c5edc35109a78cd3ebb402922"
 
+#     - name: DATA_ROOT_DIR
+#       value: $(workspaces.data.path)
+#     - name: MY_PIPELINE_UID
+#       value: $(params.pipelineUID)
+#     - name: MY_TASK_NAME
+#       value: $(context.taskRun.name)
 
+#   # https://github.com/llm-d/llm-d-benchmark/blob/main/build/Dockerfile#L1C6-L1C33
+#   image: python:3.12.9-slim-bookworm
+#   script: |
+#     #!/usr/bin/env bash
 
-apiVersion: tekton.dev/v1beta1
-kind: StepAction
-metadata:
-  name: run-workload-guidellm
-spec:
-  params:
-    - name: harnessName
-    - name: harnessProfile
-    - name: pipelineUID
-  env:
-    - name: REQUESTED_HARNESS_NAME
-      value: "$(params.harnessName)"
-    - name: MY_HARNESS_NAME
-      value: "guidellm"
-    - name: HARNESS_PROFILE
-      value: "$(params.harnessProfile)"
+#     # https://github.com/llm-d/llm-d-benchmark/blob/main/workload/harnesses/inference-perf-llm-d-benchmark.sh
 
-    - name: GIT_REPO_URL
-      value: "https://github.com/vllm-project/guidellm.git"
-    - name: GIT_REVISION
-      value: "main"
-    - name: GIT_COMMIT
-      value: "ba51acf5b0ba377c5edc35109a78cd3ebb402922"
+#     if [ "${REQUESTED_HARNESS_NAME}" != "${MY_HARNESS_NAME}" ]; then
+#       echo "Requested harness not ${MY_HARNESS_NAME}, skipping"
+#       exit 0
+#     fi
 
-    - name: DATA_ROOT_DIR
-      value: $(workspaces.data.path)
-    - name: MY_PIPELINE_UID
-      value: $(params.pipelineUID)
-    - name: MY_TASK_NAME
-      value: $(context.taskRun.name)
+#     # https://github.com/llm-d/llm-d-benchmark/blob/main/build/Dockerfile#L56-L62
+#     # https://github.com/llm-d/llm-d-benchmark/blob/main/setup/run.sh
 
-  # https://github.com/llm-d/llm-d-benchmark/blob/main/build/Dockerfile#L1C6-L1C33
-  image: python:3.12.9-slim-bookworm
-  script: |
-    #!/usr/bin/env bash
+#     EXPERIMENT_ID="experiment-$(echo -n ${MY_PIPELINE_UID} | cut -c1-8)"
+#     RESULTS_DIR="${DATA_ROOT_DIR}/${MY_HARNESS_NAME}_${EXPERIMENT_ID}_${MY_TASK_NAME}"
+#     CONTROL_DIR="${DATA_ROOT_DIR}/${MY_HARNESS_NAME}_${EXPERIMENT_ID}_${MY_TASK_NAME}"
+#     RUN_DIR=$(pwd)
 
-    # https://github.com/llm-d/llm-d-benchmark/blob/main/workload/harnesses/inference-perf-llm-d-benchmark.sh
+#     # TODO figure out which are actually needed for each step
+#     echo "🔄 Installing required tools"
+#     apt-get update
+#     apt-get install -y \
+#       git \
+#       pip \
+#       yq \
+#       && apt-get clean && rm -rf /var/cache/apt
 
-    if [ "${REQUESTED_HARNESS_NAME}" != "${MY_HARNESS_NAME}" ]; then
-      echo "Requested harness not ${MY_HARNESS_NAME}, skipping"
-      exit 0
-    fi
+#     echo "🔄 Cloning and installing harness: ${MY_HARNESS_NAME}"
+#     git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
+#     cd cd guidellm; \
+#     pip install torch --index-url https://download.pytorch.org/whl/cpu; \
+#     git checkout ${GUIDELLM_COMMIT}; \
+#     pip install .[recommended]
 
-    # https://github.com/llm-d/llm-d-benchmark/blob/main/build/Dockerfile#L56-L62
-    # https://github.com/llm-d/llm-d-benchmark/blob/main/setup/run.sh
+#     # FIX
+#     # # profile name and location
+#     # workload=$(echo ${HARNESS_PROFILE} | sed 's^\.yaml^^g' )
+#     # workload_profile=${workload}.yaml
+#     # workload_profile_path=${CONTROL_DIR}/workload/profiles/${MY_HARNESS_NAME}/${workload_profile}
 
-    EXPERIMENT_ID="experiment-$(echo -n ${MY_PIPELINE_UID} | cut -c1-8)"
-    RESULTS_DIR="${DATA_ROOT_DIR}/${MY_HARNESS_NAME}_${EXPERIMENT_ID}_${MY_TASK_NAME}"
-    CONTROL_DIR="${DATA_ROOT_DIR}/${MY_HARNESS_NAME}_${EXPERIMENT_ID}_${MY_TASK_NAME}"
-    RUN_DIR=$(pwd)
+#     # run guidellm
+#     # https://github.com/llm-d/llm-d-benchmark/blob/main/workload/harnesses/guidellm-llm-d-benchmark.sh
+#     guidellm benchmark --scenario "${workload_profile}" --output-path "${LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR}/results.json" --disable-progress > >(tee -a $LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR/stdout.log) 2> >(tee -a $LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR/stderr.log >&2)
+#     export LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC=$?
 
-    # TODO figure out which are actually needed for each step
-    echo "🔄 Installing required tools"
-    apt-get update
-    apt-get install -y \
-      git \
-      pip \
-      yq \
-      && apt-get clean && rm -rf /var/cache/apt
-
-    echo "🔄 Cloning and installing harness: ${MY_HARNESS_NAME}"
-    git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
-    cd cd guidellm; \
-    pip install torch --index-url https://download.pytorch.org/whl/cpu; \
-    git checkout ${GUIDELLM_COMMIT}; \
-    pip install .[recommended]
-
-    # FIX
-    # # profile name and location
-    # workload=$(echo ${HARNESS_PROFILE} | sed 's^\.yaml^^g' )
-    # workload_profile=${workload}.yaml
-    # workload_profile_path=${CONTROL_DIR}/workload/profiles/${MY_HARNESS_NAME}/${workload_profile}
-
-    # run guidellm
-    # https://github.com/llm-d/llm-d-benchmark/blob/main/workload/harnesses/guidellm-llm-d-benchmark.sh
-    guidellm benchmark --scenario "${workload_profile}" --output-path "${LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR}/results.json" --disable-progress > >(tee -a $LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR/stdout.log) 2> >(tee -a $LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR/stderr.log >&2)
-    export LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC=$?
-
-    # If benchmark harness returned with an error, exit here
-    if [[ $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC -ne 0 ]]; then
-      echo "❌ Harness returned with error $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC"
-      exit $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC
-    fi
-    echo "✅ Harness completed successfully."
+#     # If benchmark harness returned with an error, exit here
+#     if [[ $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC -ne 0 ]]; then
+#       echo "❌ Harness returned with error $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC"
+#       exit $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC
+#     fi
+#     echo "✅ Harness completed successfully."
