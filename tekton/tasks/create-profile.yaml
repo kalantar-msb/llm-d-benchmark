@@ -1,61 +1,40 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: create-workload-profile
+  name: create-blis-workload-profile
 spec:
   description: |
-    Create a workload profile from a template.
+    Create a workload profile for BLIS.
 
-  workspaces:
-    - name: data
-      mountPath: /results
-      
   params:
     - name: harness
       type: string
     - name: profileTemplate
       type: string
+
     - name: model
       type: string
-    - name: url
+    - name: targetUrl
       type: string
-    - name: treatment
-      type: string
+
     - name: overrides
       type: string
 
+  results:
+    - name: profile
+      description: Workload profile configuration file
+
   steps:
     - name: document-params
-      image: python:3.12.9-slim-bookworm
-      env:
-        - { name: HARNESS, value: "$(params.harness)" }
-        - { name: WORKLOAD_PROFILE, value: "$(params.profileTemplate)" }
+      image: alpine:3.20
       script: |
         #!/bin/sh
         set -eu
 
-        echo ">>> harness"
-        echo "$(params.harness)"
-        echo ">>> profileTemplate"
-        printf "%s" "$(params.profileTemplate)"
-        echo ">>> model"
-        echo "$(params.model)"
-        echo ">>> url"
-        echo "$(params.url)"
-
-        # Install required software
-        apt-get update
-        apt-get install -y --no-install-recommends \
-          curl \
-          wget \
-          ca-certificates \
-          jq \
-          && apt-get clean && rm -rf /var/cache/apt
-        curl -fsSL https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 \
-          -o /usr/local/bin/yq
-
-        # echo "🔄 Fetch workload profile"
-        # # Fetch profile template from llmd-benchmark
-        # wget -O ${workload_template_path} \
-        # --quiet \
-        #   https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/workload/profiles/${HARNESS_NAME}/${workload_template}
+        cat <<EOF > $(results.profile.path)
+        target: "$(prams.targetUrl)"
+        rate-type: concurrent
+        rate: 2
+        max-seconds: 30
+        data: prompt_tokens=256,output_tokens=128
+        EOF

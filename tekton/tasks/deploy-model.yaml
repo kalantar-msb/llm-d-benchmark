@@ -102,7 +102,8 @@ spec:
       image: alpine/kubectl:1.34.1
       script: |
         #!/bin/sh
-
+        set -eu
+        
         echo "⏳ Waiting for pods serving model ${MODEL} to be 'Running' (label = ${MODEL_LABEL})"
         echo "# decode replicas = ${DECODE_REPLICAS}"
         echo "# prefill replicas = ${PREFILL_REPLICAS}"

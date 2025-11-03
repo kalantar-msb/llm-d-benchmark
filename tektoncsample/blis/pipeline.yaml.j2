@@ -85,11 +85,11 @@ spec:
             - name: data
           params:
             - { name: harness, value: "{{ workload.harness }}" }
-            - { name: profileTemplate, value: profile }
+            - { name: profileTemplate, value: "sanity_concurrent" }
             - { name: model, value: "$(params.model)" }
-            - { name: url, value: url }
-            - { name: treatment, value: treatment }
-            - { name: overrides, value: overrides }
+            - { name: url, value: "url" }
+            - name: overrides
+              value: ""
 
         - name: run-workload-{{ stackId }}
           description: Run workload against model server.

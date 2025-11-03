@@ -35,16 +35,28 @@ spec:
     - name: model
       value: $(params.model)
   - name: deploy-model-1
+    description: Deploy model engines. Uses the modelservice helm chart. The task
+      implementation automatically overrides "modelArtifacts.name",  "modelArtifacts.uri"
+      "modelArtifacts.labels."llm-d.ai/model",  and "fullnameOverride" to avoid conflicts
+      and ensure consistency.
     taskRef:
       name: deploy-model
     runAfter:
     - download-model
+    workspaces:
+    - name: model-cache
     params:
-    - name: releaseName
-      value: model-1
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-1
+    - name: decodeReplicas
+      value: 1
+    - name: prefillReplicas
+      value: 0
     - name: namespace
       value: $(params.namespace)
-    - name: values
+    - name: config
       value:
         fullnameOverride: meta-llama-llama-3-1-8b-instruct
         multinode: false
@@ -77,45 +89,15 @@ spec:
             mountModelVolume: true
             image: ghcr.io/llm-d/llm-d:v0.2.0
             modelCommand: vllmServe
-            args:
-            - --block-size
-            - '128'
-            - --kv-transfer-config
-            - '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
-            - --disable-log-requests
-            - --disable-uvicorn-access-log
-            - --max-model-len
-            - '16000'
-            env:
-            - name: UCX_TLS
-              value: rc,sm,cuda_ipc,cuda_copy,tcp
-            - name: UCX_SOCKADDR_TLS_PRIORITY
-              value: tcp
-            - name: UCX_NET_DEVICES
-              value: mlx5_1:1
-            - name: NCCL_IB_HCA
-              value: mlx5_1
-            - name: VLLM_NIXL_SIDE_CHANNEL_PORT
-              value: '5557'
-            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: VLLM_LOGGING_LEVEL
-              value: DEBUG
-            - name: VLLM_ALLOW_LONG_MAX_MODEL_LEN
-              value: '1'
             resources:
               limits:
                 memory: 128Gi
                 cpu: '32'
                 nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
               requests:
                 memory: 128Gi
                 cpu: '32'
                 nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
             extraConfig:
               startupProbe:
                 httpGet:
@@ -146,17 +128,14 @@ spec:
               sizeLimit: 16Gi
         prefill:
           create: false
-    - name: extraValues
+    - name: configOverrides
       value:
         modelArtifacts:
           labels:
             llm-d.ai/model: $(params.experimentId)-1
-    - name: extraSets
+    - name: overrides
       value:
       - decode.parallelism.tensor=1
-      - modelArtifacts.name=$(params.model)
-      - modelArtifacts.uri=pvc://model-pvc/models/$(params.model)
-      - fullnameOverride=$(params.experimentId)-1
   - name: create-workload-profile-1
     description: Create workload profile for workload harness.
     taskRef:
@@ -169,15 +148,13 @@ spec:
     - name: harness
       value: guidellm
     - name: profileTemplate
-      value: profile
+      value: sanity_concurrent
     - name: model
       value: $(params.model)
     - name: url
       value: url
-    - name: treatment
-      value: treatment
     - name: overrides
-      value: overrides
+      value: ''
   - name: run-workload-1
     description: Run workload against model server.
     taskRef:
@@ -230,405 +207,7 @@ spec:
       value:
         bucket: cloud-object-storage-cos-standard-ere
         endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: deploy-model-2
-    taskRef:
-      name: deploy-model
-    runAfter:
-    - download-model
-    params:
-    - name: releaseName
-      value: model-2
-    - name: namespace
-      value: $(params.namespace)
-    - name: values
-      value:
-        fullnameOverride: meta-llama-llama-3-1-8b-instruct
-        multinode: false
-        modelArtifacts:
-          uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
-          size: 300Gi
-          authSecretName: hf-secret
-          name: meta-llama/Llama-3.1-8B-Instruct
-          labels:
-            llm-d.ai/inferenceServing: 'true'
-            llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
-        routing:
-          servicePort: 8000
-          proxy:
-            enabled: false
-        decode:
-          create: true
-          replicas: 1
-          acceleratorTypes:
-            labelKey: nvidia.com/gpu.product
-            labelValues:
-            - NVIDIA-H100-80GB-HBM3
-          parallelism:
-            data: 1
-            tensor: 1
-          podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
-          containers:
-          - name: vllm
-            mountModelVolume: true
-            image: ghcr.io/llm-d/llm-d:v0.2.0
-            modelCommand: vllmServe
-            args:
-            - --block-size
-            - '128'
-            - --kv-transfer-config
-            - '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
-            - --disable-log-requests
-            - --disable-uvicorn-access-log
-            - --max-model-len
-            - '16000'
-            env:
-            - name: UCX_TLS
-              value: rc,sm,cuda_ipc,cuda_copy,tcp
-            - name: UCX_SOCKADDR_TLS_PRIORITY
-              value: tcp
-            - name: UCX_NET_DEVICES
-              value: mlx5_1:1
-            - name: NCCL_IB_HCA
-              value: mlx5_1
-            - name: VLLM_NIXL_SIDE_CHANNEL_PORT
-              value: '5557'
-            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: VLLM_LOGGING_LEVEL
-              value: DEBUG
-            - name: VLLM_ALLOW_LONG_MAX_MODEL_LEN
-              value: '1'
-            resources:
-              limits:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
-              requests:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
-            extraConfig:
-              startupProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 60
-                initialDelaySeconds: 30
-                periodSeconds: 30
-                timeoutSeconds: 5
-              livenessProbe:
-                tcpSocket:
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-              readinessProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-            volumeMounts:
-            - name: dshm
-              mountPath: /dev/shm
-          volumes:
-          - name: dshm
-            emptyDir:
-              medium: Memory
-              sizeLimit: 16Gi
-        prefill:
-          create: false
-    - name: extraValues
-      value:
-        modelArtifacts:
-          labels:
-            llm-d.ai/model: $(params.experimentId)-2
-    - name: extraSets
-      value:
-      - decode.parallelism.tensor=2
-      - modelArtifacts.name=$(params.model)
-      - modelArtifacts.uri=pvc://model-pvc/models/$(params.model)
-      - fullnameOverride=$(params.experimentId)-2
-  - name: create-workload-profile-2
-    description: Create workload profile for workload harness.
-    taskRef:
-      name: create-workload-profile
-    runAfter:
-    - deploy-model-2
-    workspaces:
-    - name: data
-    params:
-    - name: harness
-      value: guidellm
-    - name: profileTemplate
-      value: profile
-    - name: model
-      value: $(params.model)
-    - name: url
-      value: url
-    - name: treatment
-      value: treatment
-    - name: overrides
-      value: overrides
-  - name: run-workload-2
-    description: Run workload against model server.
-    taskRef:
-      name: run-workload-guidellm
-    runAfter:
-    - create-workload-profile-2
-  - name: delete-model-2
-    description: Delete the Job that launched the model engine and workload generator.
-    runAfter:
-    - run-workload-2
-    taskRef:
-      name: delete-model
-  - name: raw-upload-2
-    description: Upload raw data to target data repository
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - run-workload-2
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-2/raw
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: process-data-2
-    taskRef:
-      name: process-data
-    runAfter:
-    - run-workload-2
-    workspaces:
-    - name: data
-    params: []
-  - name: processed-upload-2
-    description: Upload
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - process-data-2
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-2/processed
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: deploy-model-4
-    taskRef:
-      name: deploy-model
-    runAfter:
-    - download-model
-    params:
-    - name: releaseName
-      value: model-4
-    - name: namespace
-      value: $(params.namespace)
-    - name: values
-      value:
-        fullnameOverride: meta-llama-llama-3-1-8b-instruct
-        multinode: false
-        modelArtifacts:
-          uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
-          size: 300Gi
-          authSecretName: hf-secret
-          name: meta-llama/Llama-3.1-8B-Instruct
-          labels:
-            llm-d.ai/inferenceServing: 'true'
-            llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
-        routing:
-          servicePort: 8000
-          proxy:
-            enabled: false
-        decode:
-          create: true
-          replicas: 1
-          acceleratorTypes:
-            labelKey: nvidia.com/gpu.product
-            labelValues:
-            - NVIDIA-H100-80GB-HBM3
-          parallelism:
-            data: 1
-            tensor: 1
-          podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
-          containers:
-          - name: vllm
-            mountModelVolume: true
-            image: ghcr.io/llm-d/llm-d:v0.2.0
-            modelCommand: vllmServe
-            args:
-            - --block-size
-            - '128'
-            - --kv-transfer-config
-            - '{"kv_connector":"NixlConnector","kv_role":"kv_both"}'
-            - --disable-log-requests
-            - --disable-uvicorn-access-log
-            - --max-model-len
-            - '16000'
-            env:
-            - name: UCX_TLS
-              value: rc,sm,cuda_ipc,cuda_copy,tcp
-            - name: UCX_SOCKADDR_TLS_PRIORITY
-              value: tcp
-            - name: UCX_NET_DEVICES
-              value: mlx5_1:1
-            - name: NCCL_IB_HCA
-              value: mlx5_1
-            - name: VLLM_NIXL_SIDE_CHANNEL_PORT
-              value: '5557'
-            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: VLLM_LOGGING_LEVEL
-              value: DEBUG
-            - name: VLLM_ALLOW_LONG_MAX_MODEL_LEN
-              value: '1'
-            resources:
-              limits:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
-              requests:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-                rdma/roce_gdr: '1'
-            extraConfig:
-              startupProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 60
-                initialDelaySeconds: 30
-                periodSeconds: 30
-                timeoutSeconds: 5
-              livenessProbe:
-                tcpSocket:
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-              readinessProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-            volumeMounts:
-            - name: dshm
-              mountPath: /dev/shm
-          volumes:
-          - name: dshm
-            emptyDir:
-              medium: Memory
-              sizeLimit: 16Gi
-        prefill:
-          create: false
-    - name: extraValues
-      value:
-        modelArtifacts:
-          labels:
-            llm-d.ai/model: $(params.experimentId)-4
-    - name: extraSets
-      value:
-      - decode.parallelism.tensor=4
-      - modelArtifacts.name=$(params.model)
-      - modelArtifacts.uri=pvc://model-pvc/models/$(params.model)
-      - fullnameOverride=$(params.experimentId)-4
-  - name: create-workload-profile-4
-    description: Create workload profile for workload harness.
-    taskRef:
-      name: create-workload-profile
-    runAfter:
-    - deploy-model-4
-    workspaces:
-    - name: data
-    params:
-    - name: harness
-      value: guidellm
-    - name: profileTemplate
-      value: profile
-    - name: model
-      value: $(params.model)
-    - name: url
-      value: url
-    - name: treatment
-      value: treatment
-    - name: overrides
-      value: overrides
-  - name: run-workload-4
-    description: Run workload against model server.
-    taskRef:
-      name: run-workload-guidellm
-    runAfter:
-    - create-workload-profile-4
-  - name: delete-model-4
-    description: Delete the Job that launched the model engine and workload generator.
-    runAfter:
-    - run-workload-4
-    taskRef:
-      name: delete-model
-  - name: raw-upload-4
-    description: Upload raw data to target data repository
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - run-workload-4
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-4/raw
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: process-data-4
-    taskRef:
-      name: process-data
-    runAfter:
-    - run-workload-4
-    workspaces:
-    - name: data
-    params: []
-  - name: processed-upload-4
-    description: Upload
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - process-data-4
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-4/processed
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
   finally:
   - name: finally-delete-model-1
-    taskRef:
-      name: delete-model
-  - name: finally-delete-model-2
-    taskRef:
-      name: delete-model
-  - name: finally-delete-model-4
     taskRef:
       name: delete-model
