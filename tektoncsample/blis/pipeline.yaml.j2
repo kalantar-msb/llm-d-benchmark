@@ -85,6 +85,7 @@ spec:
             - { name: harness, value: "{{ workload.harness }}" }
             - { name: profileTemplate, value: "sanity_concurrent" }
             - { name: model, value: "$(params.model)" }
+            - { name: modelLabel, value: "{{ stackModelLabel }}"}
             - { name: targetUrl, value: "url" }
             - name: overrides
               value: ""
@@ -93,6 +94,11 @@ spec:
           description: Run workload against model server.
           taskRef: { name: run-workload-{{ workload.harness }} }
           runAfter: [ "create-workload-profile-{{ stackId }}" ]
+          workspaces:
+            - name: data
+          params:
+            - { name: profile, value: "$(tasks.create-workload-profile-{{ stackId }}.results.profile)" }
+            - { name: results_dir, value: "$(params.experimentId-{{ tp }}" }
 
         - name: delete-model-{{ stackId }}
           description: Delete the Job that launched the model engine and workload generator.
