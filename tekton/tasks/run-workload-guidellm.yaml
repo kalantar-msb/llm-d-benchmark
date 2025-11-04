@@ -21,6 +21,8 @@ spec:
         set -eu
 
         ROOT_DIR="$(workspaces.data.path)/$(params.results_dir)"
+        mkdir -p "$(workspaces.data.path)/$(params.results_dir)"
+        
         WORKLOAD_PROFILE="${ROOT_DIR}/profile.yaml"
         RESULTS="${ROOT_DIR}/guidellm-results.json"
         echo "ROOT_DIR=${ROOT_DIR}"
@@ -48,7 +50,7 @@ spec:
         export RC=$?
 
         # If benchmark harness returned with an error, exit here
-        if [[ $RC -ne 0 ]]; then
+        if [ $RC -ne 0 ]; then
           echo "❌ Harness returned with error $RC"
           exit $RC
         fi

@@ -49,6 +49,8 @@ spec:
 
         WORKLOAD_PROFILE="$(workspaces.data.path)/$(params.results_dir)/profile.yaml"
 
+        mkdir -p "$(workspaces.data.path)/$(params.results_dir)"
+
         cat <<EOF > ${WORKLOAD_PROFILE}
         target: "${targetUrl}"
         rate-type: sweep

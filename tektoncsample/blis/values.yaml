@@ -46,15 +46,30 @@ stack:
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe
-          args:
-            - "--block-size"
-            - "16"
-            # - "--tensor-parallel-size"
-            # - "1"
-            # - "--max-model-len"
-            # - "16000" 
-            - "--max-num-batched-tokens"
-            - "8192" 
+          # args:
+          #   - "--block-size"
+          #   - "16"
+          #   # - "--tensor-parallel-size"
+          #   # - "1"
+          #   # - "--max-model-len"
+          #   # - "16000" 
+          #   - "--max-num-batched-tokens"
+          #   - "8192" 
+          # modelCommand: custom # vllmServe
+          # command: ["/bin/bash", "-c"]
+          # args:
+          #   - |
+          #     pip install \
+          #       'opentelemetry-sdk>=1.26.0,<1.27.0' \
+          #       'opentelemetry-api>=1.26.0,<1.27.0' \
+          #       'opentelemetry-exporter-otlp>=1.26.0,<1.27.0' \
+          #       'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0' && \
+          #     vllm serve meta-llama/Llama-3.1-70B-Instruct \
+          #       --port 8200 \
+          #       --tensor-parallel-size 4 \
+          #       --served-model-name llama3 \
+          #       --disable-log-stats
+
 
           resources:
             limits:

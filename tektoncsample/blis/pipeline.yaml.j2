@@ -52,6 +52,18 @@ spec:
         stackModelLabel:  "$(params.experimentId)-{{ tp }}"
 
       tasks:
+        - name: deploy-otel-collector-{{ stackId }}
+          description: >-
+            Deploy a per-experiment OpenTelemetry collector
+          taskRef: { name: create-otel-collector }
+          runAfter: [ "download-model" ]
+          workspaces:
+            - name: data
+          params:
+            - { name: modelLabel, value: "{{ stackModelLabel }}"}
+            - { name: results_dir ,value: "{{ stackModelLabel }}" }
+            
+
         - name: deploy-model-{{ stackId }}
           description: >-
             Deploy model engines.
@@ -60,7 +72,7 @@ spec:
             "modelArtifacts.uri" "modelArtifacts.labels."llm-d.ai/model", 
             and "fullnameOverride" to avoid conflicts and ensure consistency.
           taskRef: { name: deploy-model }
-          runAfter: [ "download-model" ]
+          runAfter: [ "deploy-otel-collector-{{ stackId }}" ]
           workspaces:
             - name: model-cache
           params:
