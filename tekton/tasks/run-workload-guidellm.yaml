@@ -10,79 +10,42 @@ spec:
     - name: data
 
   params:
-    - { name: profile, type: string }
-    - { name: results_dir, type: string }
+    - name: results_dir
+      type: string
 
   steps:
-    - name: placeholder
-      image: alpine:3.20
+    - name: run-workload
+      image: python:3.12.9-slim-bookworm
       script: |
         #!/bin/sh
         set -eu
-        echo "run-workload-guidellm called"
 
+        ROOT_DIR="$(workspaces.data.path)/$(params.results_dir)"
+        WORKLOAD_PROFILE="${ROOT_DIR}/profile.yaml"
+        RESULTS="${ROOT_DIR}/guidellm-results.json"
+        echo "ROOT_DIR=${ROOT_DIR}"
+        echo "WORKLOAD_PROFILE=${WORKLOAD_PROFILE}"
+        echo "RESULTS=${RESULTS}"
 
-    - name: run-workload
-      env:
-        - name: GIT_REPO_URL
-          value: "https://github.com/vllm-project/guidellm.git"
-        - name: GIT_REVISION
-          value: "main"
-        - name: GIT_COMMIT
-          value: "ba51acf5b0ba377c5edc35109a78cd3ebb402922"
-
-        - name: RESULTS_DIR
-          value: $(params.results_dir)
-
-      # https://github.com/llm-d/llm-d-benchmark/blob/main/build/Dockerfile#L1C6-L1C33
-      image: python:3.12.9-slim-bookworm
-      script: |
-        #!/usr/bin/env bash
-
-        echo ">>> params.profile"
-        printf "%s" $(params.profile)
-
-        WORKLOAD_PROFILE=$(mktemp)
-        echo "WORKLOAD_PROFILE=$WORKLOAD_PROFILE"
-        printf "%s" $(params.profile) > ${WORKLOAD_PROFILE}
         cat ${WORKLOAD_PROFILE}
 
-        # https://github.com/llm-d/llm-d-benchmark/blob/main/workload/harnesses/guidellm-llm-d-benchmark.sh
-
-        # TODO figure out which are actually needed for each step
         echo "🔄 Installing required tools"
         apt-get update
         apt-get install -y \
           git \
-          pip \
-          yq \
           && apt-get clean && rm -rf /var/cache/apt
 
-        echo "🔄 Cloning and installing harness: ${MY_HARNESS_NAME}"
-        git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
-        cd guidellm; \
-        pip install torch --index-url https://download.pytorch.org/whl/cpu; \
-        git checkout ${GUIDELLM_COMMIT}; \
-        pip install .[recommended]
+        pip install git+https://github.com/vllm-project/guidellm.git
 
         # run guidellm
         guidellm benchmark \
-          --scenario "../${WORKLOAD_PROFILE}" \
-          --output-path "${LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR}/results.json" 
+          --scenario "${WORKLOAD_PROFILE}" \
+          --output-path "${RESULTS}" \
           --disable-progress
+          # --display-scheduler-stats
+          # --request-formatter-kwargs '{"stream": false}' \
+
         export RC=$?
-
-
-# guidellm benchmark \
-#     --target "http://localhost:8000" \
-#     --rate-type "sweep" \
-#     --max-requests 2000 \
-#     --random-seed 42 \
-#     --warmup-percent 0.1 \
-#     --data '{"prompt_tokens": 500, "prompt_tokens_stdev": 256, "prompt_tokens_min": 2, "prompt_tokens_max": 8192, "output_tokens": 500, "output_tokens_stdev": 256, "output_tokens_min": 1, "output_tokens_max": 8192}' \
-#     --output-path /mnt/demo_results.json \
-#     --display-scheduler-stats \
-#     --request-formatter-kwargs '{"stream": false}' \
 
         # If benchmark harness returned with an error, exit here
         if [[ $RC -ne 0 ]]; then

@@ -1,4 +1,4 @@
-# PD disaggregation example benchmark
+# BLIS training pipeline
 apiVersion: tekton.dev/v1
 kind: Pipeline
 metadata:
@@ -81,6 +81,8 @@ spec:
           description: Create workload profile for workload harness.
           taskRef: { name: create-workload-profile }
           runAfter: [ "deploy-model-{{ stackId }}" ]
+          workspaces:
+            - name: data
           params:
             - { name: harness, value: "{{ workload.harness }}" }
             - { name: profileTemplate, value: "sanity_concurrent" }
@@ -89,6 +91,7 @@ spec:
             - { name: targetUrl, value: "url" }
             - name: overrides
               value: ""
+            - { name: results_dir, value: "{{ stackModelLabel }}" }
 
         - name: run-workload-{{ stackId }}
           description: Run workload against model server.
@@ -97,8 +100,7 @@ spec:
           workspaces:
             - name: data
           params:
-            - { name: profile, value: "$(tasks.create-workload-profile-{{ stackId }}.results.profile)" }
-            - { name: results_dir, value: "$(params.experimentId-{{ tp }}" }
+            - { name: results_dir, value: "{{ stackModelLabel }}" }
 
         - name: delete-model-{{ stackId }}
           description: Delete the Job that launched the model engine and workload generator.
