@@ -39,7 +39,11 @@ spec:
       script: |
         #!/usr/bin/env bash
 
+        echo ">>> params.profile"
+        printf "%s" $(params.profile)
+
         WORKLOAD_PROFILE=$(mktemp)
+        echo "WORKLOAD_PROFILE=$WORKLOAD_PROFILE"
         printf "%s" $(params.profile) > ${WORKLOAD_PROFILE}
         cat ${WORKLOAD_PROFILE}
 
@@ -56,17 +60,29 @@ spec:
 
         echo "🔄 Cloning and installing harness: ${MY_HARNESS_NAME}"
         git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
-        cd cd guidellm; \
+        cd guidellm; \
         pip install torch --index-url https://download.pytorch.org/whl/cpu; \
         git checkout ${GUIDELLM_COMMIT}; \
         pip install .[recommended]
 
         # run guidellm
         guidellm benchmark \
-          --scenario "${WORKLOAD_PROFILE}" \
+          --scenario "../${WORKLOAD_PROFILE}" \
           --output-path "${LLMDBENCH_RUN_EXPERIMENT_RESULTS_DIR}/results.json" 
           --disable-progress
         export RC=$?
+
+
+# guidellm benchmark \
+#     --target "http://localhost:8000" \
+#     --rate-type "sweep" \
+#     --max-requests 2000 \
+#     --random-seed 42 \
+#     --warmup-percent 0.1 \
+#     --data '{"prompt_tokens": 500, "prompt_tokens_stdev": 256, "prompt_tokens_min": 2, "prompt_tokens_max": 8192, "output_tokens": 500, "output_tokens_stdev": 256, "output_tokens_min": 1, "output_tokens_max": 8192}' \
+#     --output-path /mnt/demo_results.json \
+#     --display-scheduler-stats \
+#     --request-formatter-kwargs '{"stream": false}' \
 
         # If benchmark harness returned with an error, exit here
         if [[ $RC -ne 0 ]]; then
