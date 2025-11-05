@@ -21,7 +21,6 @@ stack:
         labels:
           llm-d.ai/inferenceServing: "true"
           llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
-
       routing:
         servicePort: 8000
         proxy:
@@ -36,40 +35,47 @@ stack:
         parallelism:
           data: 1
           tensor: 1
-        podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
+        initContainers:
+        - name: install-otel-dependencies
+          image: vllm/vllm-openai:v0.11.0
+          command: ["/bin/bash", "-c"]
+          args:
+          - |-
+            set -e
+            pip install --target=/deps \
+              'opentelemetry-sdk>=1.26.0,<1.27.0' \
+              'opentelemetry-api>=1.26.0,<1.27.0' \
+              'opentelemetry-exporter-otlp>=1.26.0,<1.27.0' \
+              'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0'
+          volumeMounts:
+            - name: deps
+              mountPath: /deps
         containers:
         - name: "vllm"
           env:
             - name: EXP_DATA_PATH
               value: /mnt/exp
+            - name: OTEL_SERVICE_NAME
+              value: "vllm-exp1"
+            - name: OTEL_TRACES_SAMPLER
+              value: "traceidratio"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "1.0"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+              value: "http/protobuf"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-exp1:4318"
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: "http://otel-exp1:4318"
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe
-          # args:
-          #   - "--block-size"
-          #   - "16"
-          #   # - "--tensor-parallel-size"
-          #   # - "1"
-          #   # - "--max-model-len"
-          #   # - "16000" 
-          #   - "--max-num-batched-tokens"
-          #   - "8192" 
-          # modelCommand: custom # vllmServe
-          # command: ["/bin/bash", "-c"]
-          # args:
-          #   - |
-          #     pip install \
-          #       'opentelemetry-sdk>=1.26.0,<1.27.0' \
-          #       'opentelemetry-api>=1.26.0,<1.27.0' \
-          #       'opentelemetry-exporter-otlp>=1.26.0,<1.27.0' \
-          #       'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0' && \
-          #     vllm serve meta-llama/Llama-3.1-70B-Instruct \
-          #       --port 8200 \
-          #       --tensor-parallel-size 4 \
-          #       --served-model-name llama3 \
-          #       --disable-log-stats
-
+          args:
+            - "--otlp-traces-endpoint=http://otel-exp1:4318/v1/traces"
 
           resources:
             limits:
@@ -103,13 +109,14 @@ stack:
           volumeMounts: 
           - name: data
             mountPath: /mnt/exp
+          - name: deps
+            mountPath: /deps
         volumes: 
         - name: data
           persistentVolumeClaim:
             claimName: data-pvc
-      prefill:
-        create: false
-        replicas: 0
+        - name: deps
+          emptyDir: {}
 
 workload:
   harness: guidellm

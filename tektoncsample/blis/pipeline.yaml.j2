@@ -85,9 +85,15 @@ spec:
                 modelArtifacts:
                   labels:
                     llm-d.ai/model: "{{ stackModelLabel }}"
+                # decode: 
+                #   args:
+                #     "--otlp-traces-endpoint=http://otel-{{stackModelLabel}}:4318/v1/traces"
+
             - name: overrides
               value:
                 - decode.parallelism.tensor={{ tp }}
+                - decode.args[0]=--otlp-traces-endpoint=http://otel-{{stackModelLabel}}:4318/v1/traces
+
 
         - name: create-workload-profile-{{ stackId }}
           description: Create workload profile for workload harness.
