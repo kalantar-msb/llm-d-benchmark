@@ -92,7 +92,9 @@ spec:
             - name: overrides
               value:
                 - decode.parallelism.tensor={{ tp }}
-                - decode.args[0]=--otlp-traces-endpoint=http://otel-{{stackModelLabel}}:4318/v1/traces
+                - decode.containers[0].args[0]=--otlp-traces-endpoint=http://otel-{{stackModelLabel}}:4318/v1/traces
+                - decode.containers[0].env[0].value=http://otel-{{stackModelLabel}}:4318
+                - decode.containers[0].env[1].value=http://otel-{{stackModelLabel}}:4318
 
 
         - name: create-workload-profile-{{ stackId }}

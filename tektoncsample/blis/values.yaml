@@ -53,8 +53,12 @@ stack:
         containers:
         - name: "vllm"
           env:
-            - name: EXP_DATA_PATH
-              value: /mnt/exp
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-exp1:4318"
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: "http://otel-exp1:4318"
+            - name: PYTHONPATH
+              value: /deps
             - name: OTEL_SERVICE_NAME
               value: "vllm-exp1"
             - name: OTEL_TRACES_SAMPLER
@@ -67,10 +71,7 @@ stack:
               value: "http/protobuf"
             - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
               value: "http/protobuf"
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://otel-exp1:4318"
-            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-              value: "http://otel-exp1:4318"
+
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe
