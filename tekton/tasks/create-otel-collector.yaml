@@ -27,7 +27,8 @@ spec:
         EXP="$(params.modelLabel)"
         TRACE_RESULTS="$(workspaces.data.path)/$(params.results_dir)/traces.json"
 
-        mkdir -p "$(workspaces.data.path)/$(params.results_dir)"
+        mkdir -p "$(workspaces.data.path)/$(params.results_dir)" 
+        # touch "$(workspaces.data.path)/$(params.results_dir)/traces.json"
 
         echo "Deploying OTEL collector for experiment traces: $TRACE_RESULTS"
 
@@ -72,8 +73,23 @@ spec:
               labels:
                 app: otel-${EXP}
             spec:
+              securityContext:
+                fsGroup: 1000
+                fsGroupChangePolicy: "OnRootMismatch"
+              initContainers:
+                - name: fix-perms
+                  image: registry.access.redhat.com/ubi9/ubi-minimal
+                  command: ["sh", "-c", "chown -R 1000:1000 /data && chmod -R u+rwX,g+rwX /data"]
+                  securityContext:
+                    runAsUser: 0
+                  volumeMounts:
+                  - name: data-storage
+                    mountPath: /data
               containers:
               - name: otel-collector
+                securityContext:
+                  runAsUser: 1000
+                  runAsGroup: 1000
                 image: otel/opentelemetry-collector:latest
                 args:
                   - "--config=/etc/otel/otel-config.yaml"
@@ -81,7 +97,7 @@ spec:
                 - name: otel-config
                   mountPath: /etc/otel/
                 - name: data-storage
-                  mountPath: /workspace/data-pvc
+                  mountPath: $(workspaces.data.path)
               volumes:
               - name: otel-config
                 configMap:

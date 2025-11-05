@@ -128,7 +128,13 @@ spec:
             - name: data
             - name: target-credentials
           params:
-            - { name: dir, value: "{{experiment.name | dns }}-{{ stackId }}/raw" }
+            - name: archive
+              value: "{{ stackModelLabel }}-raw.tar.gz"
+            - name: paths
+              value: |
+                {{ stackModelLabel }}/profile.yaml
+                {{ stackModelLabel }}/guidellm-results.json
+                inference-perf_experiment-2cb750d7_experiment-matrix-run-run-experiment
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
@@ -148,7 +154,12 @@ spec:
             - name: data
             - name: target-credentials
           params:
-            - { name: dir, value: "{{experiment.name | dns }}-{{ stackId }}/processed" }
+            - name: archive
+              value: "{{ stackModelLabel }}-processed.tar.gz"
+            - name: paths
+              value: |
+                {{ stackModelLabel }}/profile.yaml
+                {{ stackModelLabel }}/guidellm-results.json
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
