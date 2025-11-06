@@ -91,20 +91,20 @@ stack:
             startupProbe:
               httpGet:
                 path: /health
-                port: 8200
+                port: 8000
               failureThreshold: 60
               initialDelaySeconds: 30
               periodSeconds: 30
               timeoutSeconds: 5
             livenessProbe:
               tcpSocket:
-                port: 8200
+                port: 8000
               failureThreshold: 3
               periodSeconds: 5
             readinessProbe:
               httpGet:
                 path: /health
-                port: 8200
+                port: 8000
               failureThreshold: 3
               periodSeconds: 5
           volumeMounts: 

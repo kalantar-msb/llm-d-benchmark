@@ -42,10 +42,9 @@ spec:
         echo $(params.results_dir)
 
         # TBD - move out of this task and pass as parameter or via results
-        # TBD - why are we using port 8200?
         echo "MODEL_LABEL=${MODEL_LABEL}"
         podIP=$(kubectl get po -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=decode -o jsonpath='{.items[0].status.podIP}')
-        targetUrl="http://${podIP}:8200"
+        targetUrl="http://${podIP}:8000"
 
         WORKLOAD_PROFILE="$(workspaces.data.path)/$(params.results_dir)/profile.yaml"
 

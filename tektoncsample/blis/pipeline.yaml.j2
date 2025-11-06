@@ -146,8 +146,8 @@ spec:
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
-        - name: process-data-{{ stackId }}
-          taskRef: { name: process-data }
+        - name: train-blis-from-guidellm-{{ stackId }}
+          taskRef: { name: train-blis-from-guidellm }
           runAfter: [ "run-workload-{{ stackId }}" ]
           workspaces:
             - name: data
@@ -157,7 +157,7 @@ spec:
         - name: processed-upload-{{ stackId }}
           description: Upload 
           taskRef: { name: upload-{{ upload_target.type }} }
-          runAfter: [ "process-data-{{ stackId }}" ]
+          runAfter: [ "train-blis-from-guidellm-{{ stackId }}" ]
           workspaces:
             - name: data
             - name: target-credentials

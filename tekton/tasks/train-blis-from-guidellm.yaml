@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: process-data
+  name: train-blis-from-guidellm
 spec:
   description: |
     Delete model engines
@@ -15,4 +15,4 @@ spec:
       script: |
         #!/bin/sh
         set -eu
-        echo "process-data called"
+        echo "train-blis-from-guidellm called"
