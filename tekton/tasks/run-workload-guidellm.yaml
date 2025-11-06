@@ -37,7 +37,11 @@ spec:
           git \
           && apt-get clean && rm -rf /var/cache/apt
 
-        pip install git+https://github.com/vllm-project/guidellm.git
+        # pip install git+https://github.com/vllm-project/guidellm.git
+        pip install git+https://github.com/vllm-project/guidellm.git@features/refactor/progress_refactor
+
+        pip uninstall -y aiologic
+        pip install aiologic==0.14.0
 
         # run guidellm
         guidellm benchmark \
@@ -45,7 +49,7 @@ spec:
           --output-path "${RESULTS}" \
           --disable-progress
           # --display-scheduler-stats
-          # --request-formatter-kwargs '{"stream": false}' \
+          --request-formatter-kwargs '{"stream": false}' \
 
         export RC=$?
 
