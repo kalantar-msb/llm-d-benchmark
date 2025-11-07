@@ -39,7 +39,7 @@ spec:
       type: string
       description: Namespace in which to upgrade/install the chart
     - name: timeout
-      default: 300
+      default: 600
 
   steps:
     - name: build-sets

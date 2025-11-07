@@ -7,7 +7,7 @@ stack:
     tensorParallelism:
       - 1
       - 2
-      - 4
+      # - 4
 
   model:
     helmValues:
@@ -25,6 +25,8 @@ stack:
         servicePort: 8000
         proxy:
           enabled: false
+      prefill:
+        create: false
       decode:
         create: true
         replicas: 1
