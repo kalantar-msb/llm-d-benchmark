@@ -32,6 +32,6 @@ spec:
     - name: namespace
       value: mert
     - name: experimentId
-      value: works
+      value: blis
     - name: model
       value: Qwen/Qwen2.5-Math-1.5B

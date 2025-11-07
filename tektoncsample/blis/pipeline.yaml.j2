@@ -132,7 +132,7 @@ spec:
               value: |
                 {{ stackModelLabel }}/profile.yaml
                 {{ stackModelLabel }}/guidellm-results.json
-                inference-perf_experiment-2cb750d7_experiment-matrix-run-run-experiment
+                {{ stackModelLabel }}/traces.json
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
@@ -158,6 +158,7 @@ spec:
               value: |
                 {{ stackModelLabel }}/profile.yaml
                 {{ stackModelLabel }}/guidellm-results.json
+                
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
