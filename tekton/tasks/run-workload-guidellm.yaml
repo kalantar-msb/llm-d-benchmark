@@ -111,9 +111,9 @@ spec:
         guidellm benchmark \
           --scenario "${WORKLOAD_PROFILE}" \
           --output-path "${RESULTS}" \
-          --disable-progress
-          # --display-scheduler-stats
-          --request-formatter-kwargs '{"stream": false}' \
+          --disable-progress \
+          --request-formatter-kwargs '{"stream": false}' # --display-scheduler-stats
+
 
         export RC=$?
 
