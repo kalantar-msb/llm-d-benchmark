@@ -96,14 +96,14 @@ spec:
                 - decode.containers[0].env[0].value=http://otel-{{stackModelLabel}}:4318
                 - decode.containers[0].env[1].value=http://otel-{{stackModelLabel}}:4318
 
-
-        - name: create-workload-profile-{{ stackId }}
-          description: Create workload profile for workload harness.
-          taskRef: { name: create-workload-profile }
+        - name: run-workload-{{ stackId }}
+          description: Create workload profile for workload harness and run it against model server.
+          taskRef: { name: run-workload-{{ workload.harness }} }
           runAfter: [ "deploy-model-{{ stackId }}" ]
           workspaces:
             - name: data
           params:
+            - { name: results_dir, value: "{{ stackModelLabel }}" }
             - { name: harness, value: "{{ workload.harness }}" }
             - { name: profileTemplate, value: "sanity_concurrent" }
             - { name: model, value: "$(params.model)" }
@@ -111,16 +111,6 @@ spec:
             - { name: targetUrl, value: "url" }
             - name: overrides
               value: ""
-            - { name: results_dir, value: "{{ stackModelLabel }}" }
-
-        - name: run-workload-{{ stackId }}
-          description: Run workload against model server.
-          taskRef: { name: run-workload-{{ workload.harness }} }
-          runAfter: [ "create-workload-profile-{{ stackId }}" ]
-          workspaces:
-            - name: data
-          params:
-            - { name: results_dir, value: "{{ stackModelLabel }}" }
 
         - name: delete-model-{{ stackId }}
           description: Delete the Job that launched the model engine and workload generator.
