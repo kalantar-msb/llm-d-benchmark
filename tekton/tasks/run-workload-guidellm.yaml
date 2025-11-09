@@ -10,19 +10,9 @@ spec:
     - name: data
 
   params:
-    - name: results_dir
-      type: string
-    - name: harness
-      type: string
-    - name: profileTemplate
-      type: string
-    - name: model
-      type: string
     - name: modelLabel
       type: string
-    - name: targetUrl
-      type: string
-    - name: overrides
+    - name: results_dir
       type: string
 
 
@@ -36,12 +26,7 @@ spec:
         #!/bin/sh
         set -eu
 
-        echo $(workspaces.data.path)
-        echo $(params.results_dir)
-
         # TBD - move out of this task and pass as parameter or via results
-
-        echo "MODEL_LABEL=${MODEL_LABEL}"
         podIP=$(kubectl get po -l llm-d.ai/model=${MODEL_LABEL},llm-d.ai/role=decode -o jsonpath='{.items[0].status.podIP}')
         targetUrl="http://${podIP}:8000"
 
@@ -93,8 +78,6 @@ spec:
         echo "WORKLOAD_PROFILE=${WORKLOAD_PROFILE}"
         echo "RESULTS=${RESULTS}"
 
-        cat ${WORKLOAD_PROFILE}
-
         echo "🔄 Installing required tools"
         apt-get update
         apt-get install -y \
@@ -112,8 +95,8 @@ spec:
           --scenario "${WORKLOAD_PROFILE}" \
           --output-path "${RESULTS}" \
           --disable-progress \
-          --request-formatter-kwargs '{"stream": false}' # --display-scheduler-stats
-
+          --request-formatter-kwargs '{"stream": false}' \
+          # --display-scheduler-stats
 
         export RC=$?
 

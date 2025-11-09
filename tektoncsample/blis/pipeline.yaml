@@ -34,6 +34,19 @@ spec:
     params:
     - name: model
       value: $(params.model)
+  - name: deploy-otel-collector-1
+    description: Deploy a per-experiment OpenTelemetry collector
+    taskRef:
+      name: create-otel-collector
+    runAfter:
+    - download-model
+    workspaces:
+    - name: data
+    params:
+    - name: modelLabel
+      value: $(params.experimentId)-1
+    - name: results_dir
+      value: $(params.experimentId)-1
   - name: deploy-model-1
     description: Deploy model engines. Uses the modelservice helm chart. The task
       implementation automatically overrides "modelArtifacts.name",  "modelArtifacts.uri"
@@ -42,7 +55,7 @@ spec:
     taskRef:
       name: deploy-model
     runAfter:
-    - download-model
+    - deploy-otel-collector-1
     workspaces:
     - name: model-cache
     params:
@@ -54,20 +67,23 @@ spec:
       value: $(params.namespace)
     - name: config
       value:
-        fullnameOverride: meta-llama-llama-3-1-8b-instruct
+        fullnameOverride: FULLNAME
+        serviceAccountOverride: default
         multinode: false
         modelArtifacts:
-          uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
+          uri: pvc://model-pvc/models/MODEL
           size: 300Gi
           authSecretName: hf-secret
-          name: meta-llama/Llama-3.1-8B-Instruct
+          name: MODEL
           labels:
             llm-d.ai/inferenceServing: 'true'
-            llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
+            llm-d.ai/model: FULLNAME
         routing:
           servicePort: 8000
           proxy:
             enabled: false
+        prefill:
+          create: false
         decode:
           create: true
           replicas: 1
@@ -78,21 +94,43 @@ spec:
           parallelism:
             data: 1
             tensor: 1
-          podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
+          initContainers:
+          - name: install-otel-dependencies
+            image: vllm/vllm-openai:v0.11.0
+            command:
+            - /bin/bash
+            - -c
+            args:
+            - "set -e\npip install --target=/deps \\\n  'opentelemetry-sdk>=1.26.0,<1.27.0'\
+              \ \\\n  'opentelemetry-api>=1.26.0,<1.27.0' \\\n  'opentelemetry-exporter-otlp>=1.26.0,<1.27.0'\
+              \ \\\n  'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0'"
+            volumeMounts:
+            - name: deps
+              mountPath: /deps
           containers:
           - name: vllm
             env:
-            - name: EXP_DATA_PATH
-              value: /mnt/exp
+            - name: PYTHONPATH
+              value: /deps
+            - name: OTEL_SERVICE_NAME
+              value: vllm-exp1
+            - name: OTEL_TRACES_SAMPLER
+              value: traceidratio
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: '1.0'
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-exp1:4318
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: http://otel-exp1:4318
             mountModelVolume: true
             image: vllm/vllm-openai:v0.11.0
             modelCommand: vllmServe
-            args:
-            - --block-size
-            - '16'
-            - --max-num-batched-tokens
-            - '8192'
             resources:
               limits:
                 memory: 128Gi
@@ -106,32 +144,33 @@ spec:
               startupProbe:
                 httpGet:
                   path: /health
-                  port: 8200
+                  port: 8000
                 failureThreshold: 60
                 initialDelaySeconds: 30
                 periodSeconds: 30
                 timeoutSeconds: 5
               livenessProbe:
                 tcpSocket:
-                  port: 8200
+                  port: 8000
                 failureThreshold: 3
                 periodSeconds: 5
               readinessProbe:
                 httpGet:
                   path: /health
-                  port: 8200
+                  port: 8000
                 failureThreshold: 3
                 periodSeconds: 5
             volumeMounts:
             - name: data
               mountPath: /mnt/exp
+            - name: deps
+              mountPath: /deps
           volumes:
           - name: data
             persistentVolumeClaim:
-              claimName: data-pvc
-        prefill:
-          create: false
-          replicas: 0
+              claimName: workspace-pvc
+          - name: deps
+            emptyDir: {}
     - name: configOverrides
       value:
         modelArtifacts:
@@ -140,35 +179,33 @@ spec:
     - name: overrides
       value:
       - decode.parallelism.tensor=1
-  - name: create-workload-profile-1
-    description: Create workload profile for workload harness.
-    taskRef:
-      name: create-workload-profile
-    runAfter:
-    - deploy-model-1
-    params:
-    - name: harness
-      value: guidellm
-    - name: profileTemplate
-      value: sanity_concurrent
-    - name: model
-      value: $(params.model)
-    - name: targetUrl
-      value: url
-    - name: overrides
-      value: ''
+      - decode.containers[name="vllm"].args=--otlp-traces-endpoint=http://otel-$(params.experimentId)-1:4318/v1/traces
+      - decode.containers[name="vllm"].env[name="OTEL_EXPORTER_OTLP_ENDPOINT"].value=http://otel-$(params.experimentId)-1:4318
+      - decode.containers[name="vllm"].env[name="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"].value=http://otel-$(params.experimentId)-1:4318
   - name: run-workload-1
     description: Run workload against model server.
     taskRef:
       name: run-workload-guidellm
     runAfter:
-    - create-workload-profile-1
+    - deploy-model-1
+    workspaces:
+    - name: data
+    params:
+    - name: modelLabel
+      value: $(params.experimentId)-1
+    - name: results_dir
+      value: $(params.experimentId)-1
   - name: delete-model-1
     description: Delete the Job that launched the model engine and workload generator.
     runAfter:
     - run-workload-1
     taskRef:
       name: delete-model
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-1
   - name: raw-upload-1
     description: Upload raw data to target data repository
     taskRef:
@@ -179,15 +216,23 @@ spec:
     - name: data
     - name: target-credentials
     params:
-    - name: dir
-      value: blis-training-1/raw
+    - name: archive
+      value: $(params.experimentId)-1-raw.tar.gz
+    - name: paths
+      value: '$(params.experimentId)-1/profile.yaml
+
+        $(params.experimentId)-1/guidellm-results.json
+
+        $(params.experimentId)-1/traces.json
+
+        '
     - name: target
       value:
         bucket: cloud-object-storage-cos-standard-ere
         endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: process-data-1
+  - name: train-blis-from-guidellm-1
     taskRef:
-      name: process-data
+      name: train-blis-from-guidellm
     runAfter:
     - run-workload-1
     workspaces:
@@ -198,363 +243,19 @@ spec:
     taskRef:
       name: upload-s3
     runAfter:
-    - process-data-1
+    - train-blis-from-guidellm-1
     workspaces:
     - name: data
     - name: target-credentials
     params:
-    - name: dir
-      value: blis-training-1/processed
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: deploy-model-2
-    description: Deploy model engines. Uses the modelservice helm chart. The task
-      implementation automatically overrides "modelArtifacts.name",  "modelArtifacts.uri"
-      "modelArtifacts.labels."llm-d.ai/model",  and "fullnameOverride" to avoid conflicts
-      and ensure consistency.
-    taskRef:
-      name: deploy-model
-    runAfter:
-    - download-model
-    workspaces:
-    - name: model-cache
-    params:
-    - name: model
-      value: $(params.model)
-    - name: modelLabel
-      value: $(params.experimentId)-2
-    - name: namespace
-      value: $(params.namespace)
-    - name: config
-      value:
-        fullnameOverride: meta-llama-llama-3-1-8b-instruct
-        multinode: false
-        modelArtifacts:
-          uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
-          size: 300Gi
-          authSecretName: hf-secret
-          name: meta-llama/Llama-3.1-8B-Instruct
-          labels:
-            llm-d.ai/inferenceServing: 'true'
-            llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
-        routing:
-          servicePort: 8000
-          proxy:
-            enabled: false
-        decode:
-          create: true
-          replicas: 1
-          acceleratorTypes:
-            labelKey: nvidia.com/gpu.product
-            labelValues:
-            - NVIDIA-H100-80GB-HBM3
-          parallelism:
-            data: 1
-            tensor: 1
-          podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
-          containers:
-          - name: vllm
-            env:
-            - name: EXP_DATA_PATH
-              value: /mnt/exp
-            mountModelVolume: true
-            image: vllm/vllm-openai:v0.11.0
-            modelCommand: vllmServe
-            args:
-            - --block-size
-            - '16'
-            - --max-num-batched-tokens
-            - '8192'
-            resources:
-              limits:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-              requests:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-            extraConfig:
-              startupProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 60
-                initialDelaySeconds: 30
-                periodSeconds: 30
-                timeoutSeconds: 5
-              livenessProbe:
-                tcpSocket:
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-              readinessProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-            volumeMounts:
-            - name: data
-              mountPath: /mnt/exp
-          volumes:
-          - name: data
-            persistentVolumeClaim:
-              claimName: data-pvc
-        prefill:
-          create: false
-          replicas: 0
-    - name: configOverrides
-      value:
-        modelArtifacts:
-          labels:
-            llm-d.ai/model: $(params.experimentId)-2
-    - name: overrides
-      value:
-      - decode.parallelism.tensor=2
-  - name: create-workload-profile-2
-    description: Create workload profile for workload harness.
-    taskRef:
-      name: create-workload-profile
-    runAfter:
-    - deploy-model-2
-    params:
-    - name: harness
-      value: guidellm
-    - name: profileTemplate
-      value: sanity_concurrent
-    - name: model
-      value: $(params.model)
-    - name: targetUrl
-      value: url
-    - name: overrides
-      value: ''
-  - name: run-workload-2
-    description: Run workload against model server.
-    taskRef:
-      name: run-workload-guidellm
-    runAfter:
-    - create-workload-profile-2
-  - name: delete-model-2
-    description: Delete the Job that launched the model engine and workload generator.
-    runAfter:
-    - run-workload-2
-    taskRef:
-      name: delete-model
-  - name: raw-upload-2
-    description: Upload raw data to target data repository
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - run-workload-2
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-2/raw
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: process-data-2
-    taskRef:
-      name: process-data
-    runAfter:
-    - run-workload-2
-    workspaces:
-    - name: data
-    params: []
-  - name: processed-upload-2
-    description: Upload
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - process-data-2
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-2/processed
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: deploy-model-4
-    description: Deploy model engines. Uses the modelservice helm chart. The task
-      implementation automatically overrides "modelArtifacts.name",  "modelArtifacts.uri"
-      "modelArtifacts.labels."llm-d.ai/model",  and "fullnameOverride" to avoid conflicts
-      and ensure consistency.
-    taskRef:
-      name: deploy-model
-    runAfter:
-    - download-model
-    workspaces:
-    - name: model-cache
-    params:
-    - name: model
-      value: $(params.model)
-    - name: modelLabel
-      value: $(params.experimentId)-4
-    - name: namespace
-      value: $(params.namespace)
-    - name: config
-      value:
-        fullnameOverride: meta-llama-llama-3-1-8b-instruct
-        multinode: false
-        modelArtifacts:
-          uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
-          size: 300Gi
-          authSecretName: hf-secret
-          name: meta-llama/Llama-3.1-8B-Instruct
-          labels:
-            llm-d.ai/inferenceServing: 'true'
-            llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
-        routing:
-          servicePort: 8000
-          proxy:
-            enabled: false
-        decode:
-          create: true
-          replicas: 1
-          acceleratorTypes:
-            labelKey: nvidia.com/gpu.product
-            labelValues:
-            - NVIDIA-H100-80GB-HBM3
-          parallelism:
-            data: 1
-            tensor: 1
-          podAnnotations:
-            k8s.v1.cni.cncf.io/networks: multi-nic-compute
-          containers:
-          - name: vllm
-            env:
-            - name: EXP_DATA_PATH
-              value: /mnt/exp
-            mountModelVolume: true
-            image: vllm/vllm-openai:v0.11.0
-            modelCommand: vllmServe
-            args:
-            - --block-size
-            - '16'
-            - --max-num-batched-tokens
-            - '8192'
-            resources:
-              limits:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-              requests:
-                memory: 128Gi
-                cpu: '32'
-                nvidia.com/gpu: '1'
-            extraConfig:
-              startupProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 60
-                initialDelaySeconds: 30
-                periodSeconds: 30
-                timeoutSeconds: 5
-              livenessProbe:
-                tcpSocket:
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-              readinessProbe:
-                httpGet:
-                  path: /health
-                  port: 8200
-                failureThreshold: 3
-                periodSeconds: 5
-            volumeMounts:
-            - name: data
-              mountPath: /mnt/exp
-          volumes:
-          - name: data
-            persistentVolumeClaim:
-              claimName: data-pvc
-        prefill:
-          create: false
-          replicas: 0
-    - name: configOverrides
-      value:
-        modelArtifacts:
-          labels:
-            llm-d.ai/model: $(params.experimentId)-4
-    - name: overrides
-      value:
-      - decode.parallelism.tensor=4
-  - name: create-workload-profile-4
-    description: Create workload profile for workload harness.
-    taskRef:
-      name: create-workload-profile
-    runAfter:
-    - deploy-model-4
-    params:
-    - name: harness
-      value: guidellm
-    - name: profileTemplate
-      value: sanity_concurrent
-    - name: model
-      value: $(params.model)
-    - name: targetUrl
-      value: url
-    - name: overrides
-      value: ''
-  - name: run-workload-4
-    description: Run workload against model server.
-    taskRef:
-      name: run-workload-guidellm
-    runAfter:
-    - create-workload-profile-4
-  - name: delete-model-4
-    description: Delete the Job that launched the model engine and workload generator.
-    runAfter:
-    - run-workload-4
-    taskRef:
-      name: delete-model
-  - name: raw-upload-4
-    description: Upload raw data to target data repository
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - run-workload-4
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-4/raw
-    - name: target
-      value:
-        bucket: cloud-object-storage-cos-standard-ere
-        endpoint: https://s3.us-east.cloud-object-storage.appdomain.cloud
-  - name: process-data-4
-    taskRef:
-      name: process-data
-    runAfter:
-    - run-workload-4
-    workspaces:
-    - name: data
-    params: []
-  - name: processed-upload-4
-    description: Upload
-    taskRef:
-      name: upload-s3
-    runAfter:
-    - process-data-4
-    workspaces:
-    - name: data
-    - name: target-credentials
-    params:
-    - name: dir
-      value: blis-training-4/processed
+    - name: archive
+      value: $(params.experimentId)-1-processed.tar.gz
+    - name: paths
+      value: '$(params.experimentId)-1/profile.yaml
+
+        $(params.experimentId)-1/guidellm-results.json
+
+        '
     - name: target
       value:
         bucket: cloud-object-storage-cos-standard-ere
@@ -563,9 +264,8 @@ spec:
   - name: finally-delete-model-1
     taskRef:
       name: delete-model
-  - name: finally-delete-model-2
-    taskRef:
-      name: delete-model
-  - name: finally-delete-model-4
-    taskRef:
-      name: delete-model
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-1

@@ -6,21 +6,22 @@ stack:
   treatments:
     tensorParallelism:
       - 1
-      - 2
+      # - 2
       # - 4
 
   model:
     helmValues:
-      fullnameOverride: meta-llama-llama-3-1-8b-instruct
+      fullnameOverride: FULLNAME
+      serviceAccountOverride: default
       multinode: false
       modelArtifacts:
-        uri: pvc://model-pvc/models/meta-llama/Llama-3.1-8B-Instruct
+        uri: pvc://model-pvc/models/MODEL
         size: 300Gi
         authSecretName: "hf-secret"
-        name: meta-llama/Llama-3.1-8B-Instruct
+        name: MODEL
         labels:
           llm-d.ai/inferenceServing: "true"
-          llm-d.ai/model: meta-llama-llama-3-1-8b-instruct
+          llm-d.ai/model: FULLNAME
       routing:
         servicePort: 8000
         proxy:
@@ -55,10 +56,6 @@ stack:
         containers:
         - name: "vllm"
           env:
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://otel-exp1:4318"
-            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-              value: "http://otel-exp1:4318"
             - name: PYTHONPATH
               value: /deps
             - name: OTEL_SERVICE_NAME
@@ -73,13 +70,13 @@ stack:
               value: "http/protobuf"
             - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
               value: "http/protobuf"
-
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-exp1:4318"
+            - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+              value: "http://otel-exp1:4318"
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe
-          args:
-            - "--otlp-traces-endpoint=http://otel-exp1:4318/v1/traces"
-
           resources:
             limits:
               memory: 128Gi
@@ -117,15 +114,12 @@ stack:
         volumes: 
         - name: data
           persistentVolumeClaim:
-            claimName: data-pvc
+            claimName: workspace-pvc
         - name: deps
           emptyDir: {}
 
 workload:
   harness: guidellm
-  profile: something
-  input_len: 10
-  output_len: 50
 
 upload_target:
   type: s3

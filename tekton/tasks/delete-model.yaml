@@ -5,10 +5,30 @@ metadata:
 spec:
   description: |
     Delete model engines
+  params:
+    - { name: namespace, type: string }
+    - { name: modelLabel, type: string }
+    - { name: debug, type: string, default: "false" }
+
   steps:
-    - name: placeholder
+    - name: dry-run
+      when:
+        - input: $(params.debug)
+          operator: in
+          values: ["true", "True"]
       image: alpine:3.20
       script: |
         #!/bin/sh
         set -eu
         echo "delete-model called"
+
+    - name: delete
+      when:
+        - input: $(params.debug)
+          operator: in
+          values: ["false", "False",]
+      ref: 
+        name: helm-delete
+      params:
+        - { name: namespace, value: "$(params.namespace)" }
+        - { name: releaseName, value: "$(params.modelLabel)-model"}
