@@ -95,8 +95,10 @@ spec:
           --scenario "${WORKLOAD_PROFILE}" \
           --output-path "${RESULTS}" \
           --disable-progress \
-          --request-formatter-kwargs '{"stream": false}' \
+          --request-type text_completions \
+          --request-formatter-kwargs '{"stream": false}'
           # --display-scheduler-stats
+
 
         export RC=$?
 
