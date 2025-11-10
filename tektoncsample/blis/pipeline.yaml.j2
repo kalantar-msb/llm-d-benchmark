@@ -134,7 +134,8 @@ spec:
           runAfter: [ "run-workload-{{ stackId }}" ]
           workspaces:
             - name: data
-          params: []
+          params:
+            - { name: results_dir, value: "{{ stackModelLabel }}" }
 
         {% if upload_target is defined and upload_target %}
         - name: processed-upload-{{ stackId }}
@@ -149,8 +150,7 @@ spec:
               value: "{{ stackModelLabel }}-processed.tar.gz"
             - name: paths
               value: |
-                {{ stackModelLabel }}/profile.yaml
-                {{ stackModelLabel }}/guidellm-results.json
+                {{ stackModelLabel }}/postprocessdata.txt
                 
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}

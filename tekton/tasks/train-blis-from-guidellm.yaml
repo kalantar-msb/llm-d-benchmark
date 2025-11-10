@@ -8,6 +8,10 @@ spec:
   
   workspaces:
     - name: data
+
+  params:
+    - name: results_dir
+      type: string
   
   steps:
     - name: placeholder
@@ -16,3 +20,11 @@ spec:
         #!/bin/sh
         set -eu
         echo "train-blis-from-guidellm called"
+
+        POST_PROCESS_DATA="$(workspaces.data.path)/$(params.results_dir)/postprocessdata.txt"
+
+        mkdir -p "$(workspaces.data.path)/$(params.results_dir)"
+
+        cat <<EOF > ${POST_PROCESS_DATA}
+        Here is the final data (model weights etc)
+        EOF
