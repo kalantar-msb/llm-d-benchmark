@@ -114,7 +114,7 @@ stack:
         volumes: 
         - name: data
           persistentVolumeClaim:
-            claimName: data-pvc
+            claimName: workspace-pvc
         - name: deps
           emptyDir: {}
 

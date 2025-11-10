@@ -196,11 +196,22 @@ spec:
     - name: results_dir
       value: $(params.experimentId)-1
   - name: delete-model-1
-    description: Delete the Job that launched the model engine and workload generator.
+    description: Delete the model engine and workload generator.
     runAfter:
     - run-workload-1
     taskRef:
       name: delete-model
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-1
+  - name: delete-otel-collector-1
+    description: Delete the OTEL objects.
+    runAfter:
+    - run-workload-1
+    taskRef:
+      name: delete-otel-collector
     params:
     - name: namespace
       value: $(params.namespace)
@@ -237,7 +248,9 @@ spec:
     - run-workload-1
     workspaces:
     - name: data
-    params: []
+    params:
+    - name: results_dir
+      value: $(params.experimentId)-1
   - name: processed-upload-1
     description: Upload
     taskRef:
@@ -251,9 +264,7 @@ spec:
     - name: archive
       value: $(params.experimentId)-1-processed.tar.gz
     - name: paths
-      value: '$(params.experimentId)-1/profile.yaml
-
-        $(params.experimentId)-1/guidellm-results.json
+      value: '$(params.experimentId)-1/postprocessdata.txt
 
         '
     - name: target
@@ -264,6 +275,14 @@ spec:
   - name: finally-delete-model-1
     taskRef:
       name: delete-model
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-1
+  - name: finally-delete-otel-collector-1
+    taskRef:
+      name: delete-otel-collector
     params:
     - name: namespace
       value: $(params.namespace)

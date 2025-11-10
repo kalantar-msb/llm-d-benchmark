@@ -11,7 +11,7 @@ spec:
         claimName: model-pvc
     - name: data
       persistentVolumeClaim:
-        claimName: data-pvc
+        claimName: workspace-pvc
     - name: hf-credentials
       secret:
         secretName: hf-secret
@@ -20,7 +20,7 @@ spec:
             path: HF_TOKEN
     - name: target-credentials
       secret:
-        secretName: s3-secret
+        secretName: ibm-cos-secret
         items:
           - key: AWS_ACCESS_KEY_ID
             path: AWS_ACCESS_KEY_ID
@@ -29,9 +29,6 @@ spec:
   pipelineRef:
     name: blis-training
   params:
-    - name: namespace
-      value: mert
-    - name: experimentId
-      value: blistestworking
-    - name: model
-      value: Qwen/Qwen2.5-Math-1.5B
+    - { name: experimentId, value: "mk-1" }
+    - { name: model, value: "Qwen/Qwen2.5-Math-1.5B" }
+    - { name: namespace, value: kalantar }

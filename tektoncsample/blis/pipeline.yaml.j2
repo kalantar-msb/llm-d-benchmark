@@ -103,9 +103,17 @@ spec:
             - { name: results_dir, value: "{{ stackModelLabel }}" }
 
         - name: delete-model-{{ stackId }}
-          description: Delete the Job that launched the model engine and workload generator.
+          description: Delete the model engine and workload generator.
           runAfter: [ "run-workload-{{ stackId }}" ]
           taskRef: { name: delete-model }
+          params:
+            - { name: namespace, value: "$(params.namespace)" }
+            - { name: modelLabel, value: "{{ stackModelLabel }}" }
+
+        - name: delete-otel-collector-{{ stackId }}
+          description: Delete the OTEL objects.
+          runAfter: [ "run-workload-{{ stackId }}" ]
+          taskRef: { name: delete-otel-collector }
           params:
             - { name: namespace, value: "$(params.namespace)" }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
@@ -176,3 +184,8 @@ spec:
             - { name: namespace, value: "$(params.namespace)" }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
 
+        - name: finally-delete-otel-collector-{{ stackId }}
+          taskRef: { name: delete-otel-collector }
+          params:
+            - { name: namespace, value: "$(params.namespace)" }
+            - { name: modelLabel, value: "{{ stackModelLabel }}" }

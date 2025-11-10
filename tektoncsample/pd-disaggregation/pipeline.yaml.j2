@@ -10,11 +10,11 @@ spec:
 
   workspaces:
     - name: model-cache
-      description: Workspace to hold models shared by model servers
-    - name: results
-      description: Workspace of results from workload generators
-    - name: credentials
-      description: Optional workspace with credentials if needed by a task
+      description: Location where models are stored; shared by multiple model servers
+    - name: hf-credentials
+      description: Workspace containing a HuggingFace token
+    - name: data
+      description: Workspace to temporarily store measurement results
 
   tasks:
     - name: log-start
@@ -26,7 +26,7 @@ spec:
             Assumes that secret/hf-secret is defined with field HF_TOKEN
 
     - name: deploy-gateway
-      taskRef: { name: deploy-helm }
+      taskRef: { name: deploy-gateway }
       results:
         - { name: gateway, type: string }
         - { name: serviceUrl, type: string}
@@ -57,7 +57,7 @@ spec:
 
       tasks:
       - name: deploy-gaie-{{ stackId }}
-        taskRef: { name: deploy-helm }
+        taskRef: { name: deploy-gaie }
         runAfter: [ deploy-gateway ]
         results:
           - { name: inferencepool, type: string }
@@ -78,7 +78,7 @@ spec:
             value:
               - inferencepool.matchLabels.ll-d.ai/model={{ stackModelLabel }}
 
-      - name: download-model
+      - name: download-model-{{ stackId }}
         taskRef: { name: download-model }
         workspaces:
           - name: model-cache
@@ -88,7 +88,7 @@ spec:
           - name: HF_TOKEN
 
       - name: deploy-model-{{ stackId }}
-        taskRef: { name: deploy-helm }
+        taskRef: { name: deploy-model }
         runAfter: [ download-model ]
         results:
           - { name: serviceUrl, type: string }
