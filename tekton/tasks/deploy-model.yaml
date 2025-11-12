@@ -80,7 +80,7 @@ spec:
         printf '%s\n' "fullnameOverride=${MODEL_LABEL}" >> /tmp/rules.txt
         printf '%s\n' "modelArtifacts.name=${MODEL}" >> /tmp/rules.txt
         printf '%s\n' "modelArtifacts.uri=pvc://${MODEL_PVC_CLAIM}/models/${MODEL}" >> /tmp/rules.txt
-        # printf '%s\n' "modelArtifacts.labels."llm-d.ai/model"=${MODEL_LABEL}" >> /tmp/rules.txt
+        printf '%s\n' "modelArtifacts.labels.\"llm-d.ai/model\"=${MODEL_LABEL}" >> /tmp/rules.txt
         echo ">>> rules.txt"
         cat /tmp/rules.txt
 
@@ -163,7 +163,68 @@ spec:
             parts.append(''.join(buf))
             return parts
 
-        SEGMENT_RE = re.compile(r'(?P<name>[^.\[\]]+)(?:\[(?P<conds>[^\]]+)\])?$')
+        # --- Segment parsing that supports quoted names ---
+        def _decode_escapes(s: str) -> str:
+            """Decode simple backslash escapes inside quoted names."""
+            out = []
+            i = 0
+            while i < len(s):
+                if s[i] == '\\' and i + 1 < len(s):
+                    out.append(s[i+1])
+                    i += 2
+                else:
+                    out.append(s[i])
+                    i += 1
+            return ''.join(out)
+
+        def parse_segment(seg: str) -> Tuple[str, Optional[Dict[str, Any]]]:
+            """
+            Parse a single path segment which may be:
+              - unquoted:   name            or  name[key=value,...]
+              - double/single-quoted: "a.b" or  'a.b'  (optionally followed by [key=val,...])
+            Returns (name, conditions_dict_or_None)
+            """
+            seg = seg.strip()
+            if not seg:
+                raise ValueError("Empty path segment")
+
+            # Quoted name?
+            if seg[0] in ('"', "'"):
+                q = seg[0]
+                i = 1
+                buf = []
+                while i < len(seg):
+                    ch = seg[i]
+                    if ch == '\\' and i + 1 < len(seg):
+                        buf.append(seg[i+1])
+                        i += 2
+                        continue
+                    if ch == q:
+                        i += 1
+                        break
+                    buf.append(ch)
+                    i += 1
+                else:
+                    raise ValueError(f"Unterminated quoted segment: {seg}")
+
+                name = ''.join(buf)
+                rest = seg[i:].strip()
+
+                conds = None
+                if rest:
+                    if not (rest.startswith('[') and rest.endswith(']')):
+                        raise ValueError(f"Invalid path segment (unexpected content after quoted name): {seg}")
+                    conds = parse_conditions(rest[1:-1])
+                return name, conds
+
+            # Unquoted (original behavior)
+            m = re.fullmatch(r'(?P<name>[^.\[\]]+)(?:\[(?P<conds>[^\]]+)\])?', seg)
+            if not m:
+                raise ValueError(f"Invalid path segment: {seg}")
+            name = m.group('name').strip()
+            conds_raw = m.group('conds')
+            conds = parse_conditions(conds_raw) if conds_raw else None
+            return name, conds
 
         def parse_conditions(cond_str: str) -> Dict[str, Any]:
             parts = re.split(r'\s*(?:,|&&)\s*', cond_str.strip())
@@ -193,15 +254,11 @@ spec:
                 raise ValueError("No assignment operator '=' found outside selectors/quotes")
             lhs = rule[:idx]
             rhs = rule[idx+1:]
+
             raw_segments = split_outside_brackets(lhs)
             segments: List[Tuple[str, Optional[Dict[str, Any]]]] = []
             for seg in raw_segments:
-                m = SEGMENT_RE.fullmatch(seg.strip())
-                if not m:
-                    raise ValueError(f"Invalid path segment: {seg}")
-                name = m.group('name').strip()
-                conds_raw = m.group('conds')
-                conds = parse_conditions(conds_raw) if conds_raw else None
+                name, conds = parse_segment(seg)
                 segments.append((name, conds))
             return segments, rhs
 

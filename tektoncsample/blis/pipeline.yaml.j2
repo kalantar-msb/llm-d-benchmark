@@ -80,11 +80,6 @@ spec:
             - { name: modelLabel, value: "{{ stackModelLabel }}"}
             - { name: namespace , value: $(params.namespace) }
             - { name: config, value: {{ stack.model.helmValues }} }
-            - name: configOverrides
-              value:
-                modelArtifacts:
-                  labels:
-                    llm-d.ai/model: "{{ stackModelLabel }}"
             - name: overrides
               value:
                 - decode.parallelism.tensor={{ tp }}
