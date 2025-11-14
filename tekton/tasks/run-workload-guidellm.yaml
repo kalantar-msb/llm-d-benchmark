@@ -37,20 +37,18 @@ spec:
         cat <<EOF > ${WORKLOAD_PROFILE}
         target: "${targetUrl}"
         rate-type: sweep
-        max-requests: 20 
-        # max-requests: 2000
+        max-requests: 50 
+        rate: 12
         random-seed: 42
-        warmup-percent: 0.1 
         data: 
-          prompt_tokens: 500
-          prompt_tokens_stdev: 256
+          prompt_tokens: 3500
+          prompt_tokens_stdev: 2500
           prompt_tokens_min: 2
-          prompt_tokens_max: 8192
-          output_tokens: 500
-          output_tokens_stdev: 56 
+          prompt_tokens_max: 7168
+          output_tokens: 800
+          output_tokens_stdev: 500 
           output_tokens_min: 1
-          output_tokens_max: 8192
-        # --request-formatter-kwargs '{"stream": false}' 
+          output_tokens_max: 1024
         EOF
 
     - name: log-profile
@@ -85,10 +83,8 @@ spec:
           && apt-get clean && rm -rf /var/cache/apt
 
         # pip install git+https://github.com/vllm-project/guidellm.git
-        pip install git+https://github.com/vllm-project/guidellm.git@features/refactor/progress_refactor
-
-        pip uninstall -y aiologic
-        pip install aiologic==0.14.0
+        # pip install git+https://github.com/vllm-project/guidellm.git@features/refactor/progress_refactor
+        pip install git+https://github.com/toslali-ibm/guidellm.git@respid
 
         # run guidellm
         guidellm benchmark \
