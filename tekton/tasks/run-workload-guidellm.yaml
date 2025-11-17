@@ -82,9 +82,8 @@ spec:
           git \
           && apt-get clean && rm -rf /var/cache/apt
 
-        # pip install git+https://github.com/vllm-project/guidellm.git
-        # pip install git+https://github.com/vllm-project/guidellm.git@features/refactor/progress_refactor
-        pip install git+https://github.com/toslali-ibm/guidellm.git@respid
+        pip install git+https://github.com/vllm-project/guidellm.git
+
 
         # run guidellm
         guidellm benchmark \

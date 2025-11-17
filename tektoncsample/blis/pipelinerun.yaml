@@ -11,7 +11,7 @@ spec:
         claimName: model-pvc
     - name: data
       persistentVolumeClaim:
-        claimName: workspace-pvc
+        claimName: data-pvc
     - name: hf-credentials
       secret:
         secretName: hf-secret
@@ -29,6 +29,6 @@ spec:
   pipelineRef:
     name: blis-training
   params:
-    - { name: experimentId, value: "mk-1" }
-    - { name: model, value: "Qwen/Qwen2.5-Math-1.5B" }
-    - { name: namespace, value: kalantar }
+    - { name: experimentId, value: "nov17-real" }
+    - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
+    - { name: namespace, value: mert }

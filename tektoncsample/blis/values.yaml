@@ -5,9 +5,9 @@ experiment:
 stack:
   treatments:
     tensorParallelism:
-      - 1
-      # - 2
-      # - 4
+      - 2
+      - 4
+      - 8
 
   MAX_MODEL_LEN: 8192
   MAX_NUM_BATCHED_TOKENS: 4096
@@ -118,7 +118,7 @@ stack:
         volumes: 
         - name: data
           persistentVolumeClaim:
-            claimName: workspace-pvc
+            claimName: data-pvc
         - name: deps
           emptyDir: {}
 
