@@ -174,6 +174,9 @@ spec:
     - name: overrides
       value:
       - decode.parallelism.tensor=1
+      - decode.containers[name="vllm"].args=--max-model-len=8192
+      - decode.containers[name="vllm"].args=--max-num-batched-tokens=4096
+      - decode.containers[name="vllm"].args=--max-num-seqs=256
       - decode.containers[name="vllm"].args=--otlp-traces-endpoint=http://otel-$(params.experimentId)-1:4318/v1/traces
       - decode.containers[name="vllm"].env[name="OTEL_EXPORTER_OTLP_ENDPOINT"].value=http://otel-$(params.experimentId)-1:4318
       - decode.containers[name="vllm"].env[name="OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"].value=http://otel-$(params.experimentId)-1:4318
