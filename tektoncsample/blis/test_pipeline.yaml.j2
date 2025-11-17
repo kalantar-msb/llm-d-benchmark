@@ -170,9 +170,7 @@ spec:
               value: "{{ stackModelLabel }}-raw.tar.gz"
             - name: paths
               value: |
-                {{ stackModelLabel }}/profile.yaml
-                {{ stackModelLabel }}/guidellm-results.json
-                {{ stackModelLabel }}/traces.json
+                {{ stackModelLabel }}
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 

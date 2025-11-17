@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: train-blis-from-guidellm
+  name: train-preprocess
 spec:
   description: |
     Delete model engines
@@ -32,7 +32,8 @@ spec:
         pip install -r requirements.txt
         
         RESULTS_DIR="$(workspaces.data.path)/$(params.results_dir)"
-        TRACES="$RESULTS_DIR/traces.json"
+        GUIDELLM_RESULTS="$RESULTS_DIR/guidellm-results.json"
+        
+        python postprocess_guidellm_common.py --guidellm_results "$GUIDELLM_RESULTS" --results_path "$RESULTS_DIR"
 
-        python train_blis.py --traces "$TRACES_RESULTS" --results_path "$RESULTS_DIR"
 

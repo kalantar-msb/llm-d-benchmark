@@ -20,7 +20,7 @@ spec:
             path: HF_TOKEN
     - name: target-credentials
       secret:
-        secretName: ibm-cos-secret
+        secretName: s3-secret
         items:
           - key: AWS_ACCESS_KEY_ID
             path: AWS_ACCESS_KEY_ID
