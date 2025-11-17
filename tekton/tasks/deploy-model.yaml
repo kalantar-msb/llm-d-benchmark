@@ -38,27 +38,12 @@ spec:
 
   steps:
 
-    # - name: add-overrides
-
-
-    # - name: apply-overrides-caller
-    #   ref: 
-    #     name: apply-overrides-to-yaml
-    #   params:
-    #     - name: config
-    #       value: $(params.config)
-    #     - name: overrides
-    #       value: $(params.overrides)
-      
-
     - name: apply-overrides
       env:
         - { name: MODEL, value: "$(params.model)" }
         - { name: MODEL_LABEL, value: "$(params.modelLabel)" }
         - { name: MODEL_PVC_CLAIM, value: "$(workspaces.model-cache.claim)" }
         - { name: TEKTON_RESULT_PATH, value: "$(step.results.merged-values.path)" }
-      results:
-        - { name: merged-values, description: overrides merged into the input config }
       image: python:3.11-slim
       args:
         - "$(params.overrides[*])"
@@ -405,14 +390,12 @@ spec:
         /tmp/apply_overrides.py \
           -i /tmp/values.yaml \
           -R /tmp/rules.txt \
-          -o /tmp/out.yaml
+          -o /workspace/values.yaml
 
         # log the merged values file
-        cat /tmp/out.yaml
+        cat /workspace/values.yaml
 
-        # Write Task result
-        # (Tekton will store this file’s contents as the 'merged-values' result)
-        cp /tmp/out.yaml "${TEKTON_RESULT_PATH}"
+        echo "expect to create helm release $(params.modelLabel)-model"
 
     - name: install-model
       ref: 
@@ -435,8 +418,8 @@ spec:
           value: $(params.namespace)
         - name: timeout
           value: 15m
-        - name: valuesYaml
-          value: "$(steps.apply-overrides.results.merged-values)"
+        - name: valuesYamlUrl
+          value: "/workspace/values.yaml"
         - name: extraValues
           value: "$(params.configOverrides)"
 
@@ -446,8 +429,6 @@ spec:
         - { name: MODEL_LABEL, value: "$(params.modelLabel)" }
         - { name: NAMESPACE, value: "$(params.namespace)" }
         - { name: START_TIMEOUT, value: "$(params.startupTimeout)" }
-        - name: HELM_VALUES_YAML
-          value: "$(steps.apply-overrides.results.merged-values)"
       image: alpine/kubectl:1.34.1
       script: |
         #!/bin/sh
@@ -456,6 +437,7 @@ spec:
         # Install tools
         apk add --no-cache yq >/dev/null
         
+        HELM_VALUES_YAML="$(cat /workspace/values.yaml)"
         DECODE_REPLICAS=0
         PREFILL_REPLICAS=0
         # TBD this should really be done on the resolved manifest; not the input configuration

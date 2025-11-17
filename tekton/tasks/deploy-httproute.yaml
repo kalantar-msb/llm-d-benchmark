@@ -16,7 +16,7 @@ spec:
     - name: inferencepool
       type: string
       description: Name of the InferencePool supporting the model
-    - name: model_label
+    - name: modelLabel
       type: string
       description: unique identifier for model in DNS compatible form
     - name: vllm_port
@@ -38,16 +38,16 @@ spec:
         - name: INFERENCEPOOL
           value: $(params.inferencepool)
         - name: MODEL_LABEL
-          value: $(params.model_label)
+          value: $(params.modelLabel)
         - name: VLLM_PORT
           value: $(params.vllm_port)
         - name: GAIE_API_VERSION
           value: $(params.gaie_api_version)
-
       image: alpine/kubectl:1.34.1
       script: |
         #!/bin/sh
         set -eu
+        
         cat <<EOF | kubectl apply -f -
           apiVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute

@@ -171,11 +171,6 @@ spec:
               claimName: workspace-pvc
           - name: deps
             emptyDir: {}
-    - name: configOverrides
-      value:
-        modelArtifacts:
-          labels:
-            llm-d.ai/model: $(params.experimentId)-1
     - name: overrides
       value:
       - decode.parallelism.tensor=1
