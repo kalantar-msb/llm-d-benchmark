@@ -14,6 +14,28 @@ spec:
       type: string
     - name: results_dir
       type: string
+    - name: max_requests
+      type: string
+    - name: rate
+      type: string
+    - name: random_seed
+      type: string
+    - name: prompt_tokens
+      type: string
+    - name: prompt_tokens_stdev
+      type: string
+    - name: prompt_tokens_min
+      type: string
+    - name: prompt_tokens_max
+      type: string
+    - name: output_tokens
+      type: string
+    - name: output_tokens_stdev
+      type: string
+    - name: output_tokens_min
+      type: string
+    - name: output_tokens_max
+      type: string
 
 
   steps:
@@ -34,22 +56,23 @@ spec:
 
         mkdir -p "$(workspaces.data.path)/$(params.results_dir)"
 
-        cat <<EOF > ${WORKLOAD_PROFILE}
+        cat <<EOF > "${WORKLOAD_PROFILE}"
         target: "${targetUrl}"
         rate-type: sweep
-        max-requests: 50 
-        rate: 12
-        random-seed: 42
-        data: 
-          prompt_tokens: 3500
-          prompt_tokens_stdev: 2500
-          prompt_tokens_min: 2
-          prompt_tokens_max: 7168
-          output_tokens: 800
-          output_tokens_stdev: 500 
-          output_tokens_min: 1
-          output_tokens_max: 1024
+        max-requests: $(params.max_requests)
+        rate: $(params.rate)
+        random-seed: $(params.random_seed)
+        data:
+          prompt_tokens: $(params.prompt_tokens)
+          prompt_tokens_stdev: $(params.prompt_tokens_stdev)
+          prompt_tokens_min: $(params.prompt_tokens_min)
+          prompt_tokens_max: $(params.prompt_tokens_max)
+          output_tokens: $(params.output_tokens)
+          output_tokens_stdev: $(params.output_tokens_stdev)
+          output_tokens_min: $(params.output_tokens_min)
+          output_tokens_max: $(params.output_tokens_max)
         EOF
+
 
     - name: log-profile
       image: alpine:3.20
@@ -89,10 +112,8 @@ spec:
         guidellm benchmark \
           --scenario "${WORKLOAD_PROFILE}" \
           --output-path "${RESULTS}" \
-          --disable-progress \
           --request-type text_completions \
           --request-formatter-kwargs '{"stream": false}'
-          # --display-scheduler-stats
 
 
         export RC=$?
