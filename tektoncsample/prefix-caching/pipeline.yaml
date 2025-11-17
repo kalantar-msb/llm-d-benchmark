@@ -1,0 +1,1080 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: prefix-caching
+spec:
+  description: Prefix Caching
+  workspaces:
+  - name: model-cache
+    description: Location where models are stored; shared by multiple model servers
+  - name: hf-credentials
+    description: Secret workspace containing a HuggingFace token
+  - name: data
+    description: Workspace of results
+  - name: target-credentials
+    description: Secret workspace containing upload target credentials.  For example,
+      AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
+  params:
+  - name: experimentId
+    type: string
+    description: Identifier for experiment execution
+  - name: model
+    type: string
+    description: the model to be deployed for training
+  - name: namespace
+    type: string
+    description: Kubernetes namespace where training will execute
+  tasks:
+  - name: deploy-gateway
+    description: 'Deploy one gateway for experiment.
+
+      Used by all concurrent model deployments.
+
+      '
+    taskRef:
+      name: deploy-gateway
+    params:
+    - name: experimentId
+      value: $(params.experimentId)
+    - name: namespace
+      value: $(params.namespace)
+    - name: config
+      value:
+        gateway:
+          gatewayClassName: kgateway
+          service:
+            type: NodePort
+          gatewayParameters:
+            enabled: true
+  - name: download-model
+    description: Download model from HuggingFace.
+    taskRef:
+      name: download-model
+    workspaces:
+    - name: model-cache
+    - name: hf-credentials
+    params:
+    - name: model
+      value: $(params.model)
+  - name: deploy-gaie-inf-sche-none-yaml
+    description: Configure GAIE for each stack.
+    taskRef:
+      name: deploy-gaie
+    runAfter:
+    - deploy-gateway
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: config
+      value:
+        inferenceExtension:
+          replicas: 1
+          image:
+            name: llm-d-inference-scheduler
+            hub: ghcr.io/llm-d
+            tag: v0.3.2-with-sidecar-fix
+            pullPolicy: Always
+          extProcPort: 9002
+          extraContainerPorts:
+          - name: zmq
+            containerPort: 5557
+            protocol: TCP
+          extraServicePorts:
+          - name: zmq
+            port: 5557
+            targetPort: 5557
+            protocol: TCP
+          env:
+          - name: HF_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: hf-secret
+                key: HF_TOKEN
+          pluginsConfigFile: inf-sche-none.yaml
+          pluginsCustomConfig:
+            inf-sche-none.yaml: '# Sample EPP configuration for running without P/D
+              with no scorers\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-none.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: prefix-cache-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\nschedulingProfiles:\n- name: default\n  plugins:\n  -
+              pluginRef: decode-filter\n  - pluginRef: max-score-picker\n  - pluginRef:
+              prefix-cache-scorer\n    weight: 0\n'
+            inf-sche-prefix-kv-queue.yaml: '# Sample EPP configuration for running
+              without P/D with prefix, kv, and queue scorers\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix-kv-queue.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: prefix-cache-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\n- type: kv-cache-scorer\n- type: queue-cache-scorer\nschedulingProfiles:\n-
+              name: default\n  plugins:\n  - pluginRef: decode-filter\n  - pluginRef:
+              max-score-picker\n  - pluginRef: prefix-cache-scorer\n    weight: 1\n  -
+              pluginRef: kv-cache-scorer\n    weight: 1\n  - pluginRef: queue-scorer\n    weight:
+              1\n'
+            inf-sche-prefix-kv.yaml: '# Sample EPP configuration for running without
+              P/D with prefix and kv scorers\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix-kv.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: prefix-cache-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\n- type: kv-cache-scorer\nschedulingProfiles:\n-
+              name: default\n  plugins:\n  - pluginRef: decode-filter\n  - pluginRef:
+              max-score-picker\n  - pluginRef: prefix-cache-scorer\n    weight: 1\n  -
+              pluginRef: kv-cache-scorer\n    weight: 1\n  - pluginRef: queue-scorer\n    weight:
+              1\n'
+            inf-sche-prefix.yaml: '# Sample EPP configuration for running without
+              P/D with prefix scorer with weight of 1\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: prefix-cache-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\nschedulingProfiles:\n- name: default\n  plugins:\n  -
+              pluginRef: decode-filter\n  - pluginRef: max-score-picker\n  - pluginRef:
+              prefix-cache-scorer\n    weight: 1\n'
+            inf-sche-queue.yaml: '# Sample EPP configuration for running without P/D
+              with no scorers\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-queue.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: queue-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\nschedulingProfiles:\n- name: default\n  plugins:\n  -
+              pluginRef: decode-filter\n  - pluginRef: max-score-picker\n  - pluginRef:
+              queue-scorer\n    weight: 1\n'
+            inf-sche-kv.yaml: '# Sample EPP configuration for running without P/D
+              with no scorers\n# https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-kv.yaml\napiVersion:
+              inference.networking.x-k8s.io/v1alpha1\nkind: EndpointPickerConfig\nplugins:\n-
+              type: kv-cache-scorer\n- type: decode-filter\n- type: max-score-picker\n-
+              type: single-profile-handler\nschedulingProfiles:\n- name: default\n  plugins:\n  -
+              pluginRef: decode-filter\n  - pluginRef: max-score-picker\n  - pluginRef:
+              kv-cache-scorer\n    weight: 1\n'
+        inferencePool:
+          targetPortNumber: 8000
+          modelServerType: vllm
+          apiVersion: inference.networking.x-k8s.io/v1alpha2
+          modelServers:
+            matchLabels:
+              llm-d.ai/inferenceServing: 'true'
+              llm-d.ai/model: qwen-qwen3-0-6b
+        provider:
+          name: none
+    - name: overrides
+      value: 'inferenceExtension.pluginConfigFile="inf-sche-none-yaml"
+
+        '
+  - name: deploy-model-inf-sche-none-yaml
+    taskRef:
+      name: deploy-model
+    runAfter:
+    - download-model
+    workspaces:
+    - name: model-cache
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: namespace
+      value: $(params.namespace)
+    - name: config
+      value:
+        fullnameOverride: MODEL_LABEL
+        serviceAccountOverride: default
+        multinode: false
+        modelArtifacts:
+          uri: pvc://model-pvc/models/MODEL
+          size: 300Gi
+          authSecretName: hf-secret
+          name: MODEL
+        routing:
+          servicePort: 8000
+          proxy:
+            enable: true
+            image: ghcr.io/llm-d/llm-d-routing-sidecar:v0.3.0
+            secure: false
+            connector: nixl
+            debugLevel: 1
+        decode:
+          create: true
+          replicas: 1
+          acceleratorTypes:
+            labelKey: nvidia.com/gpu.product
+            labelValues:
+            - NVIDIA-H100-80GB-HBM3
+          parallelism:
+            data: 1
+            tensor: 1
+          annotations:
+            deployed-by: tekton
+            modelservice: llm-d-benchmark
+          podAnnotations:
+            deployed-by: tekton
+            modelservice: llm-d-benchmark
+          containers:
+          - name: vllm
+            mountModelVolume: true
+            image: ghcr.io/llm-d/llm-d:v0.2.0
+            modelCommand: vllmServe
+            args:
+            - '{"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"block_size":
+              64, "num_cpu_blocks": 1000}}'
+            env:
+            - name: UCX_TLS
+              value: cuda_ipc,cuda_copy,tcp
+            - name: VLLM_NIXL_SIDE_CHANNEL_PORT
+              value: '5557'
+            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VLLM_LOGGING_LEVEL
+              value: DEBUG
+            - name: VLLM_ALLOW_LONG_MAX_MODEL_LEN
+              value: '1'
+            resources:
+              limits:
+                memory: 64Gi
+                cpu: '16'
+              requests:
+                memory: 64Gi
+                cpu: '16'
+            extraConfig:
+              startupProbe:
+                httpGet:
+                  path: /health
+                  port: 8200
+                failureThreshold: 60
+                initialDelaySeconds: 30
+                periodSeconds: 30
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 8200
+                failureThreshold: 3
+                periodSeconds: 5
+              readinessProbe:
+                httpGet:
+                  path: /health
+                  port: 8200
+                failureThreshold: 3
+                periodSeconds: 5
+              ports:
+              - containerPort: 5557
+                protocol: TCP
+              - containerPort: 8200
+                name: metrics
+                protocol: TCP
+            volumeMounts: []
+          volumes: []
+        prefill:
+          create: true
+          replicas: 0
+          acceleratorTypes:
+            labelKey: nvidia.com/gpu.product
+            labelValues:
+            - NVIDIA-H100-80GB-HBM3
+          parallelism:
+            data: 1
+            tensor: 1
+          annotations:
+            deployed-by: tekton
+            modelservice: llm-d-benchmark
+          podAnnotations:
+            deployed-by: tekton
+            modelservice: llm-d-benchmark
+          containers:
+          - name: vllm
+            mountModelVolume: true
+            image: ghcr.io/llm-d/llm-d:v0.2.0
+            modelCommand: vllmServe
+            args: []
+            env:
+            - name: VLLM_IS_PREFILL
+              value: '1'
+            - name: UCX_TLS
+              value: cuda_ipc,cuda_copy,tcp
+            - name: VLLM_NIXL_SIDE_CHANNEL_PORT
+              value: '5557'
+            - name: VLLM_NIXL_SIDE_CHANNEL_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: VLLM_LOGGING_LEVEL
+              value: DEBUG
+            - name: VLLM_ALLOW_LONG_MAX_MODEL_LEN
+              value: '1'
+            resources:
+              limits:
+                memory: 40Gi
+                cpu: '4'
+              requests:
+                memory: 40Gi
+                cpu: '4'
+            extraConfig:
+              startupProbe:
+                httpGet:
+                  path: /health
+                  port: 8000
+                failureThreshold: 60
+                initialDelaySeconds: 30
+                periodSeconds: 30
+                timeoutSeconds: 5
+              livenessProbe:
+                tcpSocket:
+                  port: 8000
+                failureThreshold: 3
+                periodSeconds: 5
+              readinessProbe:
+                httpGet:
+                  path: /health
+                  port: 8000
+                failureThreshold: 3
+                periodSeconds: 5
+              ports:
+              - containerPort: 5557
+                protocol: TCP
+              - containerPort: 8200
+                name: metrics
+                protocol: TCP
+            volumeMounts: []
+          volumes: []
+    - name: overrides
+      value:
+      - decode.replicas=2
+      - decode.resources.limits.cpu=16
+      - decode.resources.limits.memory=64Gi
+      - decode.resources.requests.cpu=16
+      - decode.resources.requests.memory=64Gi
+      - decode.containers[name="vllm"].args=--enforce-eager
+      - decode.containers[name="vllm"].args=--disable-log-requests
+      - decode.containers[name="vllm"].args=--disable-uvicorn-access-log
+      - decode.containers[name="vllm"].args=--block-size=64
+      - decode.containers[name="vllm"].args=--max-model-len=16000
+      - decode.containers[name="vllm"].env[name="UCX_SOCKADDR_TLS_PRIORITY"]="tcp"
+      - decode.acceleratorTypes.labelKey="nvidia.com/gpu.product"
+      - decode.acceleratorTypes.labelValues=NVIDIA-H100-80GB-HBM3
+      - prefill.create=false
+  - name: deploy-httproute-inf-sche-none-yaml
+    description: Create HttpRoute to route traffic with modelLabel in path to the
+      deployed model engines.
+    taskRef:
+      name: deploy-httproute
+    runAfter:
+    - deploy-gaie-inf-sche-none-yaml
+    - deploy-gateway
+    params:
+    - name: gateway
+      value: $(tasks.deploy-gateway.results.gateway)
+    - name: inferencepool
+      value: $(tasks.deploy-gaie-inf-sche-none-yaml.results.inferencepool)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: namespace
+      value: $(params.namespace)
+  - name: run-workload-inf-sche-none-yaml-0
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=100
+
+        data.output_len=100
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-100_100
+  - name: run-workload-inf-sche-none-yaml-1
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-0
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=100
+
+        data.output_len=200
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-200_100
+  - name: run-workload-inf-sche-none-yaml-2
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-1
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=100
+
+        data.output_len=1000
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-1000_100
+  - name: run-workload-inf-sche-none-yaml-3
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-2
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=300
+
+        data.output_len=100
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-100_300
+  - name: run-workload-inf-sche-none-yaml-4
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-3
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=300
+
+        data.output_len=300
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-300_300
+  - name: run-workload-inf-sche-none-yaml-5
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-4
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=300
+
+        data.output_len=1000
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-1000_300
+  - name: run-workload-inf-sche-none-yaml-6
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-5
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=1000
+
+        data.output_len=100
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-100_1000
+  - name: run-workload-inf-sche-none-yaml-7
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-6
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=1000
+
+        data.output_len=300
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-300_1000
+  - name: run-workload-inf-sche-none-yaml-8
+    taskRef:
+      name: run-workload-inference-perf
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-7
+    workspaces:
+    - name: data
+    params:
+    - name: model
+      value: $(params.model)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+    - name: url
+      value: http://$(tasks.deploy-gateway.results.endpoint)/$(params.experimentId)-inf-sche-none-yaml
+    - name: profileTemplate
+      value:
+        load:
+          type: constant
+          stages:
+          - rate: 2
+            duration: 50
+          - rate: 5
+            duration: 50
+          - rate: 8
+            duration: 50
+          - rate: 10
+            duration: 50
+          - rate: 12
+            duration: 50
+          - rate: 15
+            duration: 50
+          - rate: 20
+            duration: 50
+        api:
+          type: completion
+          streaming: true
+        server:
+          type: vllm
+          model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
+          base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+          ignore_eos: true
+        tokenizer:
+          pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+        data:
+          type: shared_prefix
+          shared_prefix:
+            num_groups: 32
+            num_prompts_per_group: 32
+            system_prompt_len: 2048
+            question_len: 256
+            output_len: 256
+        report:
+          request_lifecycle:
+            summary: true
+            per_stage: true
+            per_request: true
+        storage:
+          local_storage:
+            path: /workspace
+    - name: treatment
+      value: 'data.question_len=1000
+
+        data.output_len=1000
+
+        '
+    - name: results_dir
+      value: inf-sche-none-yaml-1000_1000
+  - name: pause-inf-sche-none-yaml
+    runAfter:
+    - deploy-model-inf-sche-none-yaml
+    - deploy-httproute-inf-sche-none-yaml
+    taskSpec:
+      steps:
+      - name: pause
+        image: alpine:3.20
+        script: '#!/bin/sh
+
+          set -eu
+
+
+          sleep 60
+
+          '
+  - name: delete-httproute-inf-sche-none-yaml
+    description: Delete the HTTPRoute.
+    taskRef:
+      name: delete-httproute
+    runAfter:
+    - pause-inf-sche-none-yaml
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: delete-model-inf-sche-none-yaml
+    description: Delete the model engine and workload generator.
+    taskRef:
+      name: delete-model
+    runAfter:
+    - pause-inf-sche-none-yaml
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: delete-gaie-inf-sche-none-yaml
+    description: Delete the gaie resources.
+    taskRef:
+      name: delete-gaie
+    runAfter:
+    - pause-inf-sche-none-yaml
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: delete-gateway
+    description: Delete gateway
+    taskRef:
+      name: delete-gateway
+    runAfter:
+    - delete-httproute-inf-sche-none-yaml
+    - delete-gaie-inf-sche-none-yaml
+    - delete-model-inf-sche-none-yaml
+    params:
+    - name: experimentId
+      value: $(params.experimentId)
+    - name: namespace
+      value: $(params.namespace)
+  finally:
+  - name: finally-delete-httproute-inf-sche-none-yaml
+    taskRef:
+      name: delete-httproute
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: finally-delete-model-inf-sche-none-yaml
+    taskRef:
+      name: delete-model
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: finally-delete-gaie-inf-sche-none-yaml
+    taskRef:
+      name: delete-gaie
+    params:
+    - name: namespace
+      value: $(params.namespace)
+    - name: modelLabel
+      value: $(params.experimentId)-inf-sche-none-yaml
+  - name: finally-delete-gateway
+    taskRef:
+      name: delete-gateway
+    params:
+    - name: experimentId
+      value: $(params.experimentId)
+    - name: namespace
+      value: $(params.namespace)

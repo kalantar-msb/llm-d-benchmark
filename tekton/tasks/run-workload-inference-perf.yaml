@@ -1,0 +1,108 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-workload-inference-perf
+spec:
+  description: |
+    Run workload using inference-perf.
+
+  workspaces:
+    - name: data
+
+  params:
+    - { name: model, type: string }
+    - { name: modelLabel, type: string }
+    - { name: url, type: string }
+    - { name: profileTemplate, type: string }
+    - { name: treatment, type: string }
+    - { name: results_dir, type: string }
+
+  steps:
+    - name: augment-treatment-overrides
+      results:
+        - { name: merged-overrides }
+      image: alpine/kubectl:1.34.1
+      script: |
+        #!/bin/sh
+        set -eu
+
+        printf "%s" "$(params.treatment)" > $(step.results.merged-overrides.path)
+        echo "server.model_name=$(params.model)" >> $(step.results.merged-overrides.path)
+        echo "server.base_url=$(params.url)" >> $(step.results.merged-overrides.path)
+        echo "tokenizer.pretrained_model_name_or_path=$(params.model)" >> $(step.results.merged-overrides.path)
+        echo "storage.local_storage.path=$(workspaces.data.path)/$(params.results_dir)/$(params.modelLabel)" >> $(step.results.merged-overrides.path)
+
+    - name: apply-overrides
+      ref:
+        name: apply-overrides
+      params:
+        - name: inputYaml
+          value: "$(params.profileTemplate)"
+        - name: overrides
+          value: "$(steps.augment-treatment-overrides.results.merged-overrides)"
+
+    - name: log-profile
+      image: alpine:3.20
+      script: |
+        #!/bin/sh
+        set -eu
+
+        echo ">>> created profile:"
+        cat /workspace/output.yaml
+
+    - name: run
+      env:
+        - name: GIT_REPO_URL
+          value: "https://github.com/kubernetes-sigs/inference-perf.git"
+        - name: GIT_REVISION
+          value: "main"
+        - name: GIT_COMMIT
+          value: "1ccc48b6bb9c9abb61558b719041fb000b265e59"
+        - { name: HARNESS, value: inference-perf }
+      image: python:3.12.9-slim-bookworm
+      script: |
+        #!/usr/bin/env bash
+
+        RESULTS_DIR="$(workspaces.data.path)/$(params.results_dir)"
+        WORKLOAD_PROFILE=${RESULTS_DIR}/workload/profiles/${HARNESS}/profile.yaml
+        mkdir -p ${RESULTS_DIR}/workload/profiles/${HARNESS}
+        cp /workspace/output.yaml ${WORKLOAD_PROFILE}
+
+        echo "🔄 Installing requirements"
+        apt-get update \
+        && apt-get install -y \
+          git \
+        && apt-get clean && rm -rf /var/cache/apt
+
+        git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
+        cd inference-perf
+        git checkout ${GIT_COMMIT}
+        pip install .
+
+        cat <<EOF > requirements-analysis.txt
+        matplotlib>=3.7.0
+        numpy>=2.3.1
+        seaborn>=0.12.0
+        pandas>=2.2.3
+        pydantic>=2.11.7
+        PyYAML>=6.0.2
+        scipy>=1.16.0
+        requests>=2.32.5
+        EOF
+
+        pip install --no-cache-dir \
+          --disable-pip-version-check  \
+          --upgrade \
+          -r ./requirements-analysis.txt \
+          --root-user-action=ignore
+
+        # run inference-perf
+        inference-perf --config_file "$(realpath ${WORKLOAD_PROFILE})" > >(tee -a ${RESULTS_DIR}/stdout.log) 2> >(tee -a ${RESULTS_DIR}/stderr.log >&2)
+        export LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC=$?
+
+        # If benchmark harness returned with an error, exit here
+        if [[ $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC -ne 0 ]]; then
+          echo "❌ Harness returned with error $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC"
+          exit $LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC
+        fi
+        echo "✅ Harness completed successfully."
