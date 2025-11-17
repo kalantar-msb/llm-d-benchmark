@@ -8,6 +8,8 @@ spec:
 
   workspaces:
     - name: data
+    - name: hf-credentials
+      readOnly: true
 
   params:
     - name: modelLabel
@@ -107,6 +109,7 @@ spec:
 
         pip install git+https://github.com/vllm-project/guidellm.git
 
+        export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
 
         # run guidellm
         guidellm benchmark \
