@@ -3,6 +3,9 @@ kind: PipelineRun
 metadata:
   name: training-run
 spec:
+  timeouts:
+    pipeline: 6h        # overall PipelineRun
+    tasks: 5h30m          # per-task timeout
   taskRunTemplate:
     serviceAccountName: helm-installer
   workspaces:
@@ -29,6 +32,6 @@ spec:
   pipelineRef:
     name: blis-training
   params:
-    - { name: experimentId, value: "nov17-fixedguide" }
+    - { name: experimentId, value: "todelete" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }
