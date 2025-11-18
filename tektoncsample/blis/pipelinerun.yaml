@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: test-chatbot-run
+  name: test-summarization-run
 spec:
   timeouts:
     pipeline: 6h        # overall PipelineRun
@@ -33,6 +33,6 @@ spec:
   pipelineRef:
     name: blis-test
   params:
-    - { name: experimentId, value: "nov18-testcontentgen" }
+    - { name: experimentId, value: "nov18-testsummarization" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }

@@ -40,7 +40,7 @@ spec:
         EOF
 
         # NEW: Write vllm_logging.json
-        LOGFILE_PATH="$(workspaces.data.path)/$(params.results_dir)/vllm.log"
+        LOGFILE_PATH="/mnt/exp/$(params.results_dir)/vllm.log"
 
         cat <<EOF > "$(workspaces.data.path)/$(params.results_dir)/vllm_logging.json"
         {
