@@ -65,19 +65,6 @@ spec:
             - { name: max_num_seqs, value: "{{ stack.MAX_NUM_SEQS }}" }
             - { name: results_dir, value: "{{ stackModelLabel }}" }
 
-            - { name: max_requests, value: "{{ stack.workload.profile.max_requests }}" }
-            - { name: rate, value: "{{ stack.workload.profile.rate }}" }
-            - { name: random_seed, value: "{{ stack.workload.profile.random_seed }}" }
-
-            - { name: prompt_tokens, value: "{{ stack.workload.profile.data.prompt_tokens }}" }
-            - { name: prompt_tokens_stdev, value: "{{ stack.workload.profile.data.prompt_tokens_stdev }}" }
-            - { name: prompt_tokens_min, value: "{{ stack.workload.profile.data.prompt_tokens_min }}" }
-            - { name: prompt_tokens_max, value: "{{ stack.workload.profile.data.prompt_tokens_max }}" }
-            - { name: output_tokens, value: "{{ stack.workload.profile.data.output_tokens }}" }
-            - { name: output_tokens_stdev, value: "{{ stack.workload.profile.data.output_tokens_stdev }}" }
-            - { name: output_tokens_min, value: "{{ stack.workload.profile.data.output_tokens_min }}" }
-            - { name: output_tokens_max, value: "{{ stack.workload.profile.data.output_tokens_max }}" }
-
         - name: deploy-otel-collector-{{ stackId }}
           description: >-
             Deploy a per-experiment OpenTelemetry collector
@@ -120,6 +107,7 @@ spec:
           description: Run workload against model server.
           taskRef: { name: run-workload-{{ workload.harness }} }
           runAfter: [ "deploy-model-{{ stackId }}" ]
+          timeout: "350m" 
           workspaces:
             - name: data
             - name: hf-credentials
@@ -129,8 +117,10 @@ spec:
 
             - { name: max_requests, value: "{{ stack.workload.profile.max_requests }}" }
             - { name: rate, value: "{{ stack.workload.profile.rate }}" }
+            - { name: rate_type, value: "{{ stack.workload.profile.rate_type }}" }
             - { name: random_seed, value: "{{ stack.workload.profile.random_seed }}" }
 
+            - { name: prefix_tokens, value: "{{ stack.workload.profile.data.prefix_tokens }}" }
             - { name: prompt_tokens, value: "{{ stack.workload.profile.data.prompt_tokens }}" }
             - { name: prompt_tokens_stdev, value: "{{ stack.workload.profile.data.prompt_tokens_stdev }}" }
             - { name: prompt_tokens_min, value: "{{ stack.workload.profile.data.prompt_tokens_min }}" }
@@ -181,10 +171,9 @@ spec:
             - name: data
           params:
             - { name: results_dir, value: "{{ stackModelLabel }}" }
-
         {% if upload_target is defined and upload_target %}
         - name: processed-upload-{{ stackId }}
-          description: Upload 
+          description: Upload
           taskRef: { name: upload-{{ upload_target.type }} }
           runAfter: [ "train-blis-from-guidellm-{{ stackId }}" ]
           workspaces:
@@ -196,11 +185,13 @@ spec:
             - name: paths
               value: |
                 {{ stackModelLabel }}/postprocessdata.txt
-                
+      
+               
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
-
         # should we delete results from shared data workspace?
+
+       
 
   finally:
     # Loop in 'finally': make all stacks are deleted when done
