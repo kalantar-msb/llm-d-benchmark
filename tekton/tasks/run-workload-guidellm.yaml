@@ -9,8 +9,6 @@ spec:
   workspaces:
     - name: data
     - name: hf-credentials
-      readOnly: true
-    - name: pip-cache
 
   params:
     - name: modelLabel
@@ -113,7 +111,10 @@ spec:
           git \
           && apt-get clean && rm -rf /var/cache/apt
 
-        pip install --cache-dir=/workspace/pip-cache git+https://github.com/vllm-project/guidellm.git
+        PIP_CACHE="$(workspaces.data.path)/.pip-cache"
+        mkdir -p "${PIP_CACHE}"
+
+        pip install --cache-dir="${PIP_CACHE}" git+https://github.com/vllm-project/guidellm.git
 
         export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
 

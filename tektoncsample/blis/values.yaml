@@ -5,6 +5,8 @@ experiment:
 stack:
   treatments:
     tensorParallelism:
+      # - 2
+      # - 4
       - 8
 
   MAX_MODEL_LEN: 8192
@@ -28,6 +30,42 @@ stack:
         output_tokens_stdev: 100
         output_tokens_min: 1
         output_tokens_max: 1024
+
+  # workload:
+  #   app: contentgen
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 100
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 310        # ~30% of prompt
+  #       prompt_tokens: 1024
+  #       prompt_tokens_stdev: 150
+  #       prompt_tokens_min: 10
+  #       prompt_tokens_max: 2048
+  #       output_tokens: 1024
+  #       output_tokens_stdev: 200
+  #       output_tokens_min: 10
+  #       output_tokens_max: 2048
+
+  # workload:
+  #   app: summarization
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 100
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 820        # ~20% of prompt
+  #       prompt_tokens: 4096
+  #       prompt_tokens_stdev: 500
+  #       prompt_tokens_min: 100
+  #       prompt_tokens_max: 8192
+  #       output_tokens: 512
+  #       output_tokens_stdev: 150
+  #       output_tokens_min: 10
+  #       output_tokens_max: 2048
 
   model:
     helmValues:

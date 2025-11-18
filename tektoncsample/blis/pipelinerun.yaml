@@ -29,13 +29,10 @@ spec:
             path: AWS_ACCESS_KEY_ID
           - key: AWS_SECRET_ACCESS_KEY
             path: AWS_SECRET_ACCESS_KEY
-    - name: pip-cache
-      persistentVolumeClaim:
-        claimName: pip-cache-pvc
 
   pipelineRef:
-    name: blis-training
+    name: blis-test
   params:
-    - { name: experimentId, value: "nov18-2-testchat" }
+    - { name: experimentId, value: "nov18-testchatbot" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }

@@ -19,8 +19,6 @@ spec:
       description: >-
         Secret workspace containing upload target credentials. 
         For example, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
-    - name: pip-cache
-      description: Shared pip download & build cache (wheel cache) for guidellm
 
 
   params:
@@ -116,7 +114,6 @@ spec:
           workspaces:
             - name: data
             - name: hf-credentials
-            - name: pip-cache
           params:
             - { name: modelLabel, value: "{{ stackModelLabel }}"}
             - { name: results_dir, value: "{{ stackModelLabel }}" }
