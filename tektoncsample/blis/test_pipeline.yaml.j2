@@ -164,33 +164,6 @@ spec:
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
 
-        - name: train-blis-from-guidellm-{{ stackId }}
-          taskRef: { name: train-blis-from-guidellm }
-          runAfter: [ "run-workload-{{ stackId }}" ]
-          workspaces:
-            - name: data
-          params:
-            - { name: results_dir, value: "{{ stackModelLabel }}" }
-        {% if upload_target is defined and upload_target %}
-        - name: processed-upload-{{ stackId }}
-          description: Upload
-          taskRef: { name: upload-{{ upload_target.type }} }
-          runAfter: [ "train-blis-from-guidellm-{{ stackId }}" ]
-          workspaces:
-            - name: data
-            - name: target-credentials
-          params:
-            - name: archive
-              value: "{{ stackModelLabel }}-processed.tar.gz"
-            - name: paths
-              value: |
-                {{ stackModelLabel }}/postprocessdata.txt
-      
-               
-            - { name: target, value: {{ upload_target.configuration }} }
-        {% endif %}
-        # should we delete results from shared data workspace?
-
        
 
   finally:
