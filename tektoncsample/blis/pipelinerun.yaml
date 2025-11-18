@@ -36,6 +36,6 @@ spec:
   pipelineRef:
     name: blis-training
   params:
-    - { name: experimentId, value: "nov18-testchat" }
+    - { name: experimentId, value: "nov18-2-testchat" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }

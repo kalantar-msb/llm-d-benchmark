@@ -112,6 +112,7 @@ spec:
           taskRef: { name: run-workload-{{ workload.harness }} }
           runAfter: [ "deploy-model-{{ stackId }}" ]
           timeout: "350m" 
+          retries: 3
           workspaces:
             - name: data
             - name: hf-credentials

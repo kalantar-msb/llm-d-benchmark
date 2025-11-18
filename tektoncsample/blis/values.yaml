@@ -1,12 +1,10 @@
 experiment:
-  name: blis-training
+  name: blis-test
   description: Training pipeline for BLIS scenario 5
 
 stack:
   treatments:
     tensorParallelism:
-      # - 2
-      # - 4
       - 8
 
   MAX_MODEL_LEN: 8192
@@ -30,23 +28,6 @@ stack:
         output_tokens_stdev: 100
         output_tokens_min: 1
         output_tokens_max: 1024
-
-  # workload:
-  #   profile:
-  #     rate_type: sweep
-  #     max_requests: 100
-  #     rate: 5
-  #     random_seed: 42
-  #     data:
-  #       prefix_tokens: 256
-  #       prompt_tokens: 1024
-  #       prompt_tokens_stdev: 300
-  #       prompt_tokens_min: 2
-  #       prompt_tokens_max: 1600
-  #       output_tokens: 1024
-  #       output_tokens_stdev: 300
-  #       output_tokens_min: 1
-  #       output_tokens_max: 1600
 
   model:
     helmValues:
