@@ -112,7 +112,7 @@ spec:
           git \
           && apt-get clean && rm -rf /var/cache/apt
 
-        pip install git+https://github.com/vllm-project/guidellm.git
+        pip install --cache-dir=/workspace/pip-cache git+https://github.com/vllm-project/guidellm.git
 
         export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
 

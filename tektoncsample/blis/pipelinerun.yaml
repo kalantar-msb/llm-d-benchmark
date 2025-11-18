@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: test-run
+  name: test-chatbot-run
 spec:
   timeouts:
     pipeline: 6h        # overall PipelineRun
@@ -29,6 +29,10 @@ spec:
             path: AWS_ACCESS_KEY_ID
           - key: AWS_SECRET_ACCESS_KEY
             path: AWS_SECRET_ACCESS_KEY
+    - name: pip-cache
+      persistentVolumeClaim:
+        claimName: pip-cache-pvc
+
   pipelineRef:
     name: blis-training
   params:

@@ -14,6 +14,8 @@ spec:
       type: string
     - name: max_num_seqs
       type: string
+    - name: app
+      type: string
     - name: results_dir
       type: string
       description: Directory inside the data workspace where output will be written
@@ -34,6 +36,7 @@ spec:
         max_model_len: $(params.max_model_len)
         max_num_batched_tokens: $(params.max_num_batched_tokens)
         max_num_seqs: $(params.max_num_seqs)
+        app: $(params.app)
         EOF
 
         echo "Generated exp-config.yaml in $(workspaces.data.path)/$(params.results_dir)"
