@@ -5,49 +5,49 @@ experiment:
 stack:
   treatments:
     tensorParallelism:
-      # - 2
-      # - 4
+      - 2
+      - 4
       - 8
 
   MAX_MODEL_LEN: 8192
   MAX_NUM_BATCHED_TOKENS: 4096
   MAX_NUM_SEQS: 256
   
-  workload:
-    app: chatbot
-    profile:
-      rate_type: sweep
-      max_requests: 100
-      rate: 5
-      random_seed: 42
-      data:
-        prefix_tokens: 256
-        prompt_tokens: 256
-        prompt_tokens_stdev: 100
-        prompt_tokens_min: 2
-        prompt_tokens_max: 800
-        output_tokens: 256
-        output_tokens_stdev: 100
-        output_tokens_min: 1
-        output_tokens_max: 1024
-
   # workload:
-  #   app: contentgen
+  #   app: chatbot
   #   profile:
   #     rate_type: sweep
   #     max_requests: 100
   #     rate: 5
   #     random_seed: 42
   #     data:
-  #       prefix_tokens: 310        # ~30% of prompt
-  #       prompt_tokens: 1024
-  #       prompt_tokens_stdev: 150
-  #       prompt_tokens_min: 10
-  #       prompt_tokens_max: 2048
-  #       output_tokens: 1024
-  #       output_tokens_stdev: 200
-  #       output_tokens_min: 10
-  #       output_tokens_max: 2048
+  #       prefix_tokens: 256
+  #       prompt_tokens: 256
+  #       prompt_tokens_stdev: 100
+  #       prompt_tokens_min: 2
+  #       prompt_tokens_max: 800
+  #       output_tokens: 256
+  #       output_tokens_stdev: 100
+  #       output_tokens_min: 1
+  #       output_tokens_max: 1024
+
+  workload:
+    app: contentgen
+    profile:
+      rate_type: sweep
+      max_requests: 60
+      rate: 5
+      random_seed: 42
+      data:
+        prefix_tokens: 310        # ~30% of prompt
+        prompt_tokens: 1024
+        prompt_tokens_stdev: 150
+        prompt_tokens_min: 10
+        prompt_tokens_max: 2048
+        output_tokens: 1024
+        output_tokens_stdev: 200
+        output_tokens_min: 10
+        output_tokens_max: 2048
 
   # workload:
   #   app: summarization
@@ -132,6 +132,10 @@ stack:
               value: "http://otel-exp1:4318"
             - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
               value: "http://otel-exp1:4318"
+            - name: VLLM_CONFIGURE_LOGGING
+              value: "1"
+            - name: VLLM_LOGGING_CONFIG_PATH
+              value: "/workspace/vllm_logging.json"
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe

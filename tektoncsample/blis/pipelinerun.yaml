@@ -33,6 +33,6 @@ spec:
   pipelineRef:
     name: blis-test
   params:
-    - { name: experimentId, value: "nov18-testchatbot" }
+    - { name: experimentId, value: "nov18-testcontentgen" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }

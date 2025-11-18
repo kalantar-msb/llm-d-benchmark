@@ -39,4 +39,37 @@ spec:
         app: $(params.app)
         EOF
 
-        echo "Generated exp-config.yaml in $(workspaces.data.path)/$(params.results_dir)"
+        # NEW: Write vllm_logging.json
+        LOGFILE_PATH="$(workspaces.data.path)/$(params.results_dir)/vllm.log"
+
+        cat <<EOF > "$(workspaces.data.path)/$(params.results_dir)/vllm_logging.json"
+        {
+          "version": 1,
+          "disable_existing_loggers": false,
+          "handlers": {
+            "file": {
+              "class": "logging.FileHandler",
+              "filename": "${LOGFILE_PATH}",
+              "level": "INFO",
+              "formatter": "simple"
+            }
+          },
+          "formatters": {
+            "simple": {
+              "format": "%(asctime)s %(levelname)s %(name)s: %(message)s"
+            }
+          },
+          "loggers": {
+            "vllm": {
+              "handlers": ["file"],
+              "level": "INFO",
+              "propagate": false
+            }
+          }
+        }
+        EOF
+
+
+        echo "Generated exp-config.yaml and vllm_logging.json in $(workspaces.data.path)/$(params.results_dir)"
+
+
