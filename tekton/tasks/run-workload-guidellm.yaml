@@ -20,7 +20,11 @@ spec:
       type: string
     - name: rate
       type: string
+    - name: rate_type
+      type: string
     - name: random_seed
+      type: string
+    - name: prefix_tokens
       type: string
     - name: prompt_tokens
       type: string
@@ -60,11 +64,12 @@ spec:
 
         cat <<EOF > "${WORKLOAD_PROFILE}"
         target: "${targetUrl}"
-        rate-type: sweep
+        rate-type: $(params.rate_type)
         max-requests: $(params.max_requests)
         rate: $(params.rate)
         random-seed: $(params.random_seed)
         data:
+          prefix_tokens: $(params.prefix_tokens)
           prompt_tokens: $(params.prompt_tokens)
           prompt_tokens_stdev: $(params.prompt_tokens_stdev)
           prompt_tokens_min: $(params.prompt_tokens_min)

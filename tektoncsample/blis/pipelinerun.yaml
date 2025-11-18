@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: training-run
+  name: test-run
 spec:
   timeouts:
     pipeline: 6h        # overall PipelineRun
@@ -32,6 +32,6 @@ spec:
   pipelineRef:
     name: blis-training
   params:
-    - { name: experimentId, value: "todelete" }
+    - { name: experimentId, value: "nov18-testchat" }
     - { name: model, value: "meta-llama/Llama-3.3-70B-Instruct" }
     - { name: namespace, value: mert }

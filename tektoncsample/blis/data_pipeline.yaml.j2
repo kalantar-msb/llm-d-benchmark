@@ -67,8 +67,10 @@ spec:
 
             - { name: max_requests, value: "{{ stack.workload.profile.max_requests }}" }
             - { name: rate, value: "{{ stack.workload.profile.rate }}" }
+            - { name: rate_type, value: "{{ stack.workload.profile.rate_type }}" }
             - { name: random_seed, value: "{{ stack.workload.profile.random_seed }}" }
 
+            - { name: prefix_tokens, value: "{{ stack.workload.profile.data.prefix_tokens }}" }
             - { name: prompt_tokens, value: "{{ stack.workload.profile.data.prompt_tokens }}" }
             - { name: prompt_tokens_stdev, value: "{{ stack.workload.profile.data.prompt_tokens_stdev }}" }
             - { name: prompt_tokens_min, value: "{{ stack.workload.profile.data.prompt_tokens_min }}" }
@@ -120,6 +122,7 @@ spec:
           description: Run workload against model server.
           taskRef: { name: run-workload-{{ workload.harness }} }
           runAfter: [ "deploy-model-{{ stackId }}" ]
+          timeout: "350m" 
           workspaces:
             - name: data
             - name: hf-credentials
@@ -129,8 +132,10 @@ spec:
 
             - { name: max_requests, value: "{{ stack.workload.profile.max_requests }}" }
             - { name: rate, value: "{{ stack.workload.profile.rate }}" }
+            - { name: rate_type, value: "{{ stack.workload.profile.rate_type }}" }
             - { name: random_seed, value: "{{ stack.workload.profile.random_seed }}" }
 
+            - { name: prefix_tokens, value: "{{ stack.workload.profile.data.prefix_tokens }}" }
             - { name: prompt_tokens, value: "{{ stack.workload.profile.data.prompt_tokens }}" }
             - { name: prompt_tokens_stdev, value: "{{ stack.workload.profile.data.prompt_tokens_stdev }}" }
             - { name: prompt_tokens_min, value: "{{ stack.workload.profile.data.prompt_tokens_min }}" }
