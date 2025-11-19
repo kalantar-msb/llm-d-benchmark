@@ -122,7 +122,9 @@ spec:
         # sleep $SLEEP_TIME
         # pip install git+https://github.com/vllm-project/guidellm.git
 
-        export PYTHONPATH=$(workspaces.data.path)/guidellm:$PYTHONPATH
+        # export PYTHONPATH=$(workspaces.data.path)/guidellm:$PYTHONPATH
+        export PYTHONPATH="$(workspaces.data.path)/guidellm"
+
 
         export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
 

@@ -26,8 +26,7 @@ spec:
         echo "📦 Installing guidellm into $TARGET"
         mkdir -p "$TARGET"
 
-        pip install --no-cache-dir \
-          --target="$TARGET" \
+        pip install --target="$TARGET" \
           git+https://github.com/vllm-project/guidellm.git
 
         echo "✔ Done installing guidellm"
