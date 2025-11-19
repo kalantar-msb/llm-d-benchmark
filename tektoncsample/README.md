@@ -76,6 +76,14 @@ Each Step is implemented by a Container in the Pod.
 
 5. Create RWX PVC `model-pvc` (300Gi) and `data-pvc` (20Gi) for storing models and execution results, respectively. These PVC is shared between all tasks.  For example:
     ```shell
+    export PVC_NAME=model-pvc
+    export PVC_SIZE=300Gi
+    ```
+    ```shell
+    export PVC_NAME=data-pvc
+    export PVC_SIZE=20Gi
+    ```
+    ```shell
     cat <<EOF | kubectl apply -f -
     apiVersion: v1
     kind: PersistentVolumeClaim
@@ -88,7 +96,7 @@ Each Step is implemented by a Container in the Pod.
         resources:
             requests:
                 storage: ${PVC_SIZE}
-        storageClassName: ocs-storagecluster-cephfs
+        # storageClassName: ocs-storagecluster-cephfs
         volumeMode: Filesystem
     EOF
     ```
