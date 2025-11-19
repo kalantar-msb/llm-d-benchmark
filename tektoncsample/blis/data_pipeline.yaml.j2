@@ -77,7 +77,7 @@ spec:
           description: >-
             Deploy a per-experiment OpenTelemetry collector
           taskRef: { name: create-otel-collector }
-          runAfter: [ "download-model" ]
+          runAfter: [ "install-guidellm" ]
           workspaces:
             - name: data
           params:
