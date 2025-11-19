@@ -208,8 +208,8 @@ spec:
             image: ghcr.io/llm-d/llm-d:v0.2.0
             modelCommand: vllmServe
             args:
-            - '{"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"block_size":
-              64, "num_cpu_blocks": 1000}}'
+            - --max-model-len=16000
+            - --kv-transfer-config={"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"block_size":64,"num_cpu_blocks":1000}}
             env:
             - name: UCX_TLS
               value: cuda_ipc,cuda_copy,tcp
@@ -983,28 +983,12 @@ spec:
         '
     - name: results_dir
       value: inf-sche-none-yaml-1000_1000
-  - name: pause-inf-sche-none-yaml
-    runAfter:
-    - deploy-model-inf-sche-none-yaml
-    - deploy-httproute-inf-sche-none-yaml
-    taskSpec:
-      steps:
-      - name: pause
-        image: alpine:3.20
-        script: '#!/bin/sh
-
-          set -eu
-
-
-          sleep 60
-
-          '
   - name: delete-httproute-inf-sche-none-yaml
     description: Delete the HTTPRoute.
     taskRef:
       name: delete-httproute
     runAfter:
-    - pause-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-8
     params:
     - name: namespace
       value: $(params.namespace)
@@ -1015,7 +999,7 @@ spec:
     taskRef:
       name: delete-model
     runAfter:
-    - pause-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-8
     params:
     - name: namespace
       value: $(params.namespace)
@@ -1026,7 +1010,7 @@ spec:
     taskRef:
       name: delete-gaie
     runAfter:
-    - pause-inf-sche-none-yaml
+    - run-workload-inf-sche-none-yaml-8
     params:
     - name: namespace
       value: $(params.namespace)

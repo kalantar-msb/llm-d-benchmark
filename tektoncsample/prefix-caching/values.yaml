@@ -207,7 +207,8 @@ stack:
           image: "ghcr.io/llm-d/llm-d:v0.2.0"
           modelCommand: vllmServe
           args:
-            - '{"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"block_size": 64, "num_cpu_blocks": 1000}}'
+            - "--max-model-len=16000"
+            - "--kv-transfer-config={\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"block_size\":64,\"num_cpu_blocks\":1000}}"
           env:
             - name: UCX_TLS
               value: "cuda_ipc,cuda_copy,tcp"
