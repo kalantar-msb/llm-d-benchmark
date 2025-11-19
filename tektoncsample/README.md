@@ -26,6 +26,7 @@ Each Step is implemented by a Container in the Pod.
 
 1. HF token
 2. s3 bucket and necessary keys for uploading results
+3. tekton CLI (`tkn`)
 
 ### Setup
 
@@ -69,6 +70,10 @@ Each Step is implemented by a Container in the Pod.
     envsubst '$NAMESPACE' < tekton/roles.yaml | kubectl apply -f -
     ```
 
+    ```shell
+    oc adm policy add-scc-to-user anyuid -z default -n $NAMESPACE
+    ```
+
 5. Create RWX PVC `model-pvc` (300Gi) and `data-pvc` (20Gi) for storing models and execution results, respectively. This PVC is shared between all tasks.  For example:
     ```shell
     cat <<EOF | kubectl apply -f -
@@ -87,6 +92,12 @@ Each Step is implemented by a Container in the Pod.
         volumeMode: Filesystem
     EOF
     ```
+5. Install `tkn` cli:
+
+    ```shell
+    brew install tektoncd-cli
+    ```
+
 
 ### Running a pipeline
 
