@@ -20,6 +20,7 @@ spec:
         Secret workspace containing upload target credentials. 
         For example, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
 
+
   params:
     - name: experimentId
       type: string
@@ -41,6 +42,12 @@ spec:
         - name: model
           value: "$(params.model)"
 
+    - name: install-guidellm
+      taskRef: { name: install-guidellm }
+      runAfter: [ "download-model" ]
+      workspaces:
+        - name: data
+
     # Loop: Run stacks (different model engine configurations) in parallel
     - loopName: per-stack
       foreach:
@@ -54,7 +61,7 @@ spec:
       tasks:
         - name: create-exp-config-{{ stackId }}
           taskRef: { name: create-exp-config }
-          runAfter: [ "download-model" ]
+          runAfter: [ "install-guidellm" ]
           workspaces:
             - name: data
           params:
@@ -166,6 +173,8 @@ spec:
                 {{ stackModelLabel }}
             - { name: target, value: {{ upload_target.configuration }} }
         {% endif %}
+
+       
 
   finally:
     # Loop in 'finally': make all stacks are deleted when done

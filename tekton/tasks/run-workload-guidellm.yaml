@@ -111,15 +111,23 @@ spec:
           git \
           && apt-get clean && rm -rf /var/cache/apt
 
-        PIP_CACHE="$(workspaces.data.path)/.pip-cache"
-        mkdir -p "${PIP_CACHE}"
+        # PIP_CACHE="$(workspaces.data.path)/.pip-cache"
+        # mkdir -p "${PIP_CACHE}"
 
-        pip install --cache-dir="${PIP_CACHE}" git+https://github.com/vllm-project/guidellm.git
+        # pip install --cache-dir="${PIP_CACHE}" git+https://github.com/vllm-project/guidellm.git
+        # pip install --no-cache-dir git+https://github.com/vllm-project/guidellm.git
+        # sleep random here plz
+        # SLEEP_TIME=$(od -An -N2 -i /dev/urandom | awk '{print $1 % 300}')
+        # echo "Sleeping for ${SLEEP_TIME} seconds to stagger pip install..."
+        # sleep $SLEEP_TIME
+        # pip install git+https://github.com/vllm-project/guidellm.git
+
+        export PYTHONPATH=$(workspaces.data.path)/guidellm:$PYTHONPATH
 
         export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
 
         # run guidellm
-        guidellm benchmark \
+        python -m guidellm benchmark \
           --scenario "${WORKLOAD_PROFILE}" \
           --output-path "${RESULTS}" \
           --request-type text_completions \

@@ -10,26 +10,28 @@ stack:
       - 8
 
   MAX_MODEL_LEN: 8192
-  MAX_NUM_BATCHED_TOKENS: 4096
+  # MAX_MODEL_LEN: 13312
+  # MAX_NUM_BATCHED_TOKENS: 4096
+  MAX_NUM_BATCHED_TOKENS: 2048
   MAX_NUM_SEQS: 256
   
-  # workload:
-  #   app: chatbot
-  #   profile:
-  #     rate_type: sweep
-  #     max_requests: 100
-  #     rate: 5
-  #     random_seed: 42
-  #     data:
-  #       prefix_tokens: 256
-  #       prompt_tokens: 256
-  #       prompt_tokens_stdev: 100
-  #       prompt_tokens_min: 2
-  #       prompt_tokens_max: 800
-  #       output_tokens: 256
-  #       output_tokens_stdev: 100
-  #       output_tokens_min: 1
-  #       output_tokens_max: 1024
+  workload:
+    app: chatbot
+    profile:
+      rate_type: sweep
+      max_requests: 60
+      rate: 5
+      random_seed: 42
+      data:
+        prefix_tokens: 256
+        prompt_tokens: 256
+        prompt_tokens_stdev: 100
+        prompt_tokens_min: 2
+        prompt_tokens_max: 800
+        output_tokens: 256
+        output_tokens_stdev: 100
+        output_tokens_min: 1
+        output_tokens_max: 1024
 
   # workload:
   #   app: contentgen
@@ -49,23 +51,41 @@ stack:
   #       output_tokens_min: 10
   #       output_tokens_max: 2048
 
-  workload:
-    app: summarization
-    profile:
-      rate_type: sweep
-      max_requests: 60
-      rate: 5
-      random_seed: 42
-      data:
-        prefix_tokens: 820        # ~20% of prompt
-        prompt_tokens: 4096
-        prompt_tokens_stdev: 500
-        prompt_tokens_min: 100
-        prompt_tokens_max: 7168
-        output_tokens: 512
-        output_tokens_stdev: 150
-        output_tokens_min: 10
-        output_tokens_max: 1024
+  # workload:
+  #   app: summarization
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 60
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 820        # ~20% of prompt
+  #       prompt_tokens: 4096
+  #       prompt_tokens_stdev: 500
+  #       prompt_tokens_min: 100
+  #       prompt_tokens_max: 7168
+  #       output_tokens: 512
+  #       output_tokens_stdev: 150
+  #       output_tokens_min: 10
+  #       output_tokens_max: 1024
+
+  # workload:
+  #   app: doc
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 60
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 1000       # ~10% of prompt
+  #       prompt_tokens: 9000
+  #       prompt_tokens_stdev: 1200
+  #       prompt_tokens_min: 500
+  #       prompt_tokens_max: 11000
+  #       output_tokens: 1536
+  #       output_tokens_stdev: 300
+  #       output_tokens_min: 50
+  #       output_tokens_max: 2000
 
   model:
     helmValues:
@@ -107,6 +127,7 @@ stack:
               'opentelemetry-sdk>=1.26.0,<1.27.0' \
               'opentelemetry-api>=1.26.0,<1.27.0' \
               'opentelemetry-exporter-otlp>=1.26.0,<1.27.0' \
+              'python-json-logger' \
               'opentelemetry-semantic-conventions-ai>=0.4.1,<0.5.0'
           volumeMounts:
             - name: deps
