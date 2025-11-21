@@ -320,6 +320,7 @@ spec:
     - deploy-httproute-64-1000
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -389,6 +390,7 @@ spec:
     - run-workload-64-1000-0
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -458,6 +460,7 @@ spec:
     - run-workload-64-1000-1
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -527,6 +530,7 @@ spec:
     - run-workload-64-1000-2
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -596,6 +600,7 @@ spec:
     - run-workload-64-1000-3
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -665,6 +670,7 @@ spec:
     - run-workload-64-1000-4
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -734,6 +740,7 @@ spec:
     - run-workload-64-1000-5
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -803,6 +810,7 @@ spec:
     - run-workload-64-1000-6
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)
@@ -872,6 +880,7 @@ spec:
     - run-workload-64-1000-7
     workspaces:
     - name: data
+    - name: hf-credentials
     params:
     - name: model
       value: $(params.model)

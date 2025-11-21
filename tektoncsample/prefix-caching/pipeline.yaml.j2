@@ -140,6 +140,7 @@ spec:
                     {% endif %}
                   workspaces:
                     - name: data
+                    - name: hf-credentials
                   params:
                     - { name: model, value: $(params.model) }
                     - { name: modelLabel, value: {{ stackModelLabel }} }
