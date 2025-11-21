@@ -11,6 +11,8 @@ spec:
     description: Secret workspace containing a HuggingFace token
   - name: data
     description: Workspace of results
+  - name: source
+    description: Location where source is cached
   - name: target-credentials
     description: Secret workspace containing upload target credentials.  For example, AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY for s3.
   params:
@@ -59,6 +61,14 @@ spec:
     params:
     - name: model
       value: $(params.model)
+  - name: install-workload-harness
+    description: 'Install workload harness
+
+      '
+    taskRef:
+      name: install-inference-perf
+    workspaces:
+    - name: source
   - name: deploy-gaie-64-1000
     description: Configure GAIE for each stack.
     taskRef:
@@ -318,7 +328,9 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -387,8 +399,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-0
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -457,8 +471,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-1
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -527,8 +543,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-2
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -597,8 +615,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-3
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -667,8 +687,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-4
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -737,8 +759,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-5
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -807,8 +831,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-6
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:
@@ -877,8 +903,10 @@ spec:
     runAfter:
     - deploy-model-64-1000
     - deploy-httproute-64-1000
+    - install-workload-harness
     - run-workload-64-1000-7
     workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
     params:

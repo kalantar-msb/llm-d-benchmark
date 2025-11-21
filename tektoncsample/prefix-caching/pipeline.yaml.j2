@@ -15,6 +15,8 @@ spec:
       description: Secret workspace containing a HuggingFace token
     - name: data
       description: Workspace of results
+    - name: source
+      description: Location where source is cached
     - name: target-credentials
       description: >-
         Secret workspace containing upload target credentials. 
@@ -56,6 +58,13 @@ spec:
       params:
         - name: model
           value: "$(params.model)"
+
+    - name: install-workload-harness
+      description: |
+        Install workload harness
+      taskRef: { name: install-{{ workload.harness }} }
+      workspaces:
+        - name: source
 
     # Loop: Run stacks (different model engine configurations) in parallel
     - loopName: per-stack
@@ -118,7 +127,6 @@ spec:
             - { name: namespace, value: $(params.namespace) }
 
         # run workload
-
         # loop through workload configurations
         - loopName: per-workload
           foreach:
@@ -135,10 +143,12 @@ spec:
                   runAfter:
                     - deploy-model-{{ stackId }}
                     - deploy-httproute-{{ stackId }}
+                    - install-workload-harness
                     {% if not treatment_i.is_first %}
                     - run-workload-{{ stackId }}-{{ treatment_i.prev_i }}
                     {% endif %}
                   workspaces:
+                    - name: source
                     - name: data
                     - name: hf-credentials
                   params:

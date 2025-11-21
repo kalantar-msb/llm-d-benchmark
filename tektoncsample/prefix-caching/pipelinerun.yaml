@@ -12,6 +12,9 @@ spec:
     - name: data
       persistentVolumeClaim:
         claimName: data-pvc
+    - name: source
+      persistentVolumeClaim:
+        claimName: source-pvc
     - name: hf-credentials
       secret:
         secretName: hf-secret

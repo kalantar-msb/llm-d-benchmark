@@ -7,6 +7,7 @@ spec:
     Run workload using inference-perf.
 
   workspaces:
+    - name: source
     - name: data
     - name: hf-credentials
 
@@ -53,12 +54,6 @@ spec:
 
     - name: run
       env:
-        - name: GIT_REPO_URL
-          value: "https://github.com/kubernetes-sigs/inference-perf.git"
-        - name: GIT_REVISION
-          value: "main"
-        - name: GIT_COMMIT
-          value: "1ccc48b6bb9c9abb61558b719041fb000b265e59"
         - { name: HARNESS, value: inference-perf }
       image: python:3.12.9-slim-bookworm
       script: |
@@ -69,35 +64,11 @@ spec:
         mkdir -p ${RESULTS_DIR}/workload/profiles/${HARNESS}
         cp /workspace/output.yaml ${WORKLOAD_PROFILE}
 
-        echo "🔄 Installing requirements"
-        apt-get update \
-        && apt-get install -y \
-          git \
-        && apt-get clean && rm -rf /var/cache/apt
-
-        git clone --branch ${GIT_REVISION} ${GIT_REPO_URL}
-        cd inference-perf
-        git checkout ${GIT_COMMIT}
-        pip install .
-
-        cat <<EOF > requirements-analysis.txt
-        matplotlib>=3.7.0
-        numpy>=2.3.1
-        seaborn>=0.12.0
-        pandas>=2.2.3
-        pydantic>=2.11.7
-        PyYAML>=6.0.2
-        scipy>=1.16.0
-        requests>=2.32.5
-        EOF
-
-        pip install --no-cache-dir \
-          --disable-pip-version-check  \
-          --upgrade \
-          -r ./requirements-analysis.txt \
-          --root-user-action=ignore
+        HARNESS_DIR=$(workspaces.source.path)/harnesses
+        source ${HARNESS_DIR}/${HARNESS}.venv/bin/activate
 
         # run inference-perf
+        export HF_TOKEN=$(cat "$(workspaces.hf-credentials.path)/HF_TOKEN")
         inference-perf --config_file "$(realpath ${WORKLOAD_PROFILE})" > >(tee -a ${RESULTS_DIR}/stdout.log) 2> >(tee -a ${RESULTS_DIR}/stderr.log >&2)
         export LLMDBENCH_RUN_EXPERIMENT_HARNESS_RC=$?
 

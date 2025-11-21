@@ -74,13 +74,17 @@ Each Step is implemented by a Container in the Pod.
     oc adm policy add-scc-to-user anyuid -z default -n $NAMESPACE
     ```
 
-5. Create RWX PVC `model-pvc` (300Gi) and `data-pvc` (20Gi) for storing models and execution results, respectively. These PVC is shared between all tasks.  For example:
+5. Create RWX PVC `model-pvc` (300Gi) and `data-pvc` (20Gi) and `source-pvc` (20Gi) for storing models and execution results, respectively. These PVC is shared between all tasks.  For example:
     ```shell
     export PVC_NAME=model-pvc
     export PVC_SIZE=300Gi
     ```
     ```shell
     export PVC_NAME=data-pvc
+    export PVC_SIZE=20Gi
+    ```
+    ```shell
+    export PVC_NAME=source-pvc
     export PVC_SIZE=20Gi
     ```
     ```shell
