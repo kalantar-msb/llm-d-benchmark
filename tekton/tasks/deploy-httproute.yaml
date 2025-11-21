@@ -48,7 +48,7 @@ spec:
         #!/bin/sh
         set -eu
         
-        cat <<EOF | kubectl apply -f -
+        cat <<EOF > /workspace/manifest.yaml
           apiVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
           metadata:
@@ -79,13 +79,16 @@ spec:
                   path:
                     type: ReplacePrefixMatch
                     replacePrefixMatch: /
-            - backendRefs:
-              - group: ${GAIE_API_VERSION}
-                kind: InferencePool
-                name: ${INFERENCEPOOL}
-                port: ${VLLM_PORT}
-                weight: 1
-              timeouts:
-                backendRequest: 0s
-                request: 0s
+            # - backendRefs:
+            #   - group: ${GAIE_API_VERSION}
+            #     kind: InferencePool
+            #     name: ${INFERENCEPOOL}
+            #     port: ${VLLM_PORT}
+            #     weight: 1
+            #   timeouts:
+            #     backendRequest: 0s
+            #     request: 0s
         EOF
+
+        cat /workspace/manifest.yaml
+        kubectl apply -f /workspace/manifest.yaml

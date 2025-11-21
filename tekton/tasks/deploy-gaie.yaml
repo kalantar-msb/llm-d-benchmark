@@ -11,14 +11,10 @@ spec:
       description: InferencePool name
 
   params:
-    - name: modelLabel
-      type: string
-    - name: config
-      type: string
-    - name: overrides
-      type: string
-    - name: namespace
-      type: string
+    - { name: modelLabel, type: string }
+    - { name: config, type: string }
+    - { name: overrides, type: string, default: "" }
+    - { name: namespace, type: string }
 
   steps:
 

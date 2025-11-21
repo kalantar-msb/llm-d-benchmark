@@ -1,13 +1,52 @@
+# An experiment pipeline values file has 2 main sections that define the experiment:
+#
+# (a) stack - defines the default stack to be deployed and fields to vary. The 
+#             stack includes a gateway (shared by all deployed models), gateway API  
+#             inference extension configuration (one for each model), and the model.
+#
+# (b) workload - defines the workload that should be run against each stack. This is 
+#                specified by identifying the load generation harness, a default 
+#                configuration for it and fields to vary.
+# 
+# Other sections include:
+# - experiment - name and description to add for documenting the experiment
+# - upload-target - where the results of the experiment should be uploaded
+
 experiment:
   name: prefix-caching
   description: Prefix Caching
 
+# A model stack defines the default stack to be deployed including any gateway (shared 
+# by all deployed models), gateway API inference extension configuration (one for each
+# model), and the model.
+# This includes variation defined as factors or treatments. The pipeline template defines
+# which is used.
+# Note that tektonc is independent of the  terminology ("stack", "factor" and "treatment").
+# Other terms can be used. These terms are used to match those in llm-d-benchmark.
 stack:
-  treatments:
-    pluginConfigFile:
-      - "inf-sche-none.yaml"
-      # - "inf-sche-prefix.yaml"
+  # You can specify a set of factors (for a set of values for each) over which 
+  # the cartesian product of combinations of model stacks will be tested in parallel.
+  # In this example, 3 x 2 = 6
+  factors:
+    blockSize:
+      - 64
+      # - 128
+      # - 256
+    numCpuBlocks:
+      - 1000
+      # - 10000
+  # Alternatively, you can specify a specify specific combinations of factors
+  # to test in parallel. In this case 3 model stacks will be tested.
+  # treatments:
+  #   - blockSize: 64
+  #     numCpuBlocks: 1000
+  #   - blockSize: 128
+  #     numCpuBlocks: 1000
+  #   - blockSize: 256
+  #     numCpuBlocks: 10000
 
+  # default gateway configuration
+  # the configuration field is a helm values file
   gateway:
     configuration:
       gateway:
@@ -16,6 +55,9 @@ stack:
           type: NodePort
         gatewayParameters:
           enabled: true
+
+  # default gaie configuration        
+  # the configuration field is a helm values file
   gaie:
     configuration:
       inferenceExtension:
@@ -41,121 +83,6 @@ stack:
               secretKeyRef:
                 name: hf-secret
                 key: HF_TOKEN
-        pluginsConfigFile: "inf-sche-none.yaml"
-        pluginsCustomConfig:
-          inf-sche-none.yaml: |
-            # Sample EPP configuration for running without P/D with no scorers
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-none.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: prefix-cache-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: prefix-cache-scorer
-                weight: 0
-          inf-sche-prefix-kv-queue.yaml: |
-            # Sample EPP configuration for running without P/D with prefix, kv, and queue scorers
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix-kv-queue.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: prefix-cache-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            - type: kv-cache-scorer
-            - type: queue-cache-scorer
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: prefix-cache-scorer
-                weight: 1
-              - pluginRef: kv-cache-scorer
-                weight: 1
-              - pluginRef: queue-scorer
-                weight: 1
-          inf-sche-prefix-kv.yaml: |
-            # Sample EPP configuration for running without P/D with prefix and kv scorers
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix-kv.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: prefix-cache-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            - type: kv-cache-scorer
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: prefix-cache-scorer
-                weight: 1
-              - pluginRef: kv-cache-scorer
-                weight: 1
-              - pluginRef: queue-scorer
-                weight: 1
-          inf-sche-prefix.yaml: |
-            # Sample EPP configuration for running without P/D with prefix scorer with weight of 1
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-prefix.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: prefix-cache-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: prefix-cache-scorer
-                weight: 1
-          inf-sche-queue.yaml: |
-            # Sample EPP configuration for running without P/D with no scorers
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-queue.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: queue-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: queue-scorer
-                weight: 1
-          inf-sche-kv.yaml: |
-            # Sample EPP configuration for running without P/D with no scorers
-            # https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/setup/presets/gaie/inf-sche-kv.yaml
-            apiVersion: inference.networking.x-k8s.io/v1alpha1
-            kind: EndpointPickerConfig
-            plugins:
-            - type: kv-cache-scorer
-            - type: decode-filter
-            - type: max-score-picker
-            - type: single-profile-handler
-            schedulingProfiles:
-            - name: default
-              plugins:
-              - pluginRef: decode-filter
-              - pluginRef: max-score-picker
-              - pluginRef: kv-cache-scorer
-                weight: 1
       inferencePool:
         targetPortNumber: 8000
         modelServerType: vllm
@@ -166,8 +93,11 @@ stack:
             llm-d.ai/model: qwen-qwen3-0-6b
       provider:
         name: none
+
+  # default model server configuration
+  # the configuration field is a helm values file
   model:
-    helmValues:
+    configuration:
       fullnameOverride: MODEL_LABEL
       serviceAccountOverride: default
       multinode: false
@@ -204,14 +134,17 @@ stack:
         containers:
         - name: "vllm"
           mountModelVolume: true
-          image: "ghcr.io/llm-d/llm-d:v0.2.0"
+          image: "ghcr.io/llm-d/llm-d-cuda:v0.3.1"
           modelCommand: vllmServe
           args:
-            - "--max-model-len=16000"
-            - "--kv-transfer-config={\"kv_connector\":\"OffloadingConnector\",\"kv_role\":\"kv_both\",\"kv_connector_extra_config\":{\"block_size\":64,\"num_cpu_blocks\":1000}}"
+            - --enforce-eager
+            - --disable-log-requests
+            - --disable-uvicorn-access-log
           env:
             - name: UCX_TLS
               value: "cuda_ipc,cuda_copy,tcp"
+            - name: UCX_SOCKADDR_TLS_PRIORITY
+              value: "tcp"
             - name: VLLM_NIXL_SIDE_CHANNEL_PORT
               value: "5557"
             - name: VLLM_NIXL_SIDE_CHANNEL_HOST
@@ -332,10 +265,10 @@ stack:
           volumeMounts: []
         volumes: []
 
+# the workload that should be run against each stack. Specified by identifying the 
+# load generation harness, a default configuration for it and fields to vary.
+# As with the stack, varying fields can be specified using factors or treatments.
 workload:
-  harness: inference-perf
-  profile: shared_prefix_synthetic.yaml
-  # do we want the user to embed the profile?
   treatments:
     - question_len: 100
       output_len: 100
@@ -355,6 +288,10 @@ workload:
       output_len: 300
     - question_len: 1000
       output_len: 1000
+
+  # The workload harness to be used for load generation and data collection
+  harness: inference-perf
+  # default configuration for the specific harness
   profileTemplate:
     load:
       type: constant
@@ -378,11 +315,11 @@ workload:
       streaming: true
     server:
       type: vllm
-      model_name: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_MODEL
-      base_url: REPLACE_ENV_LLMDBENCH_HARNESS_STACK_ENDPOINT_URL
+      model_name: MODEL
+      base_url: STACK_ENDPOINT
       ignore_eos: true
     tokenizer:
-      pretrained_model_name_or_path: REPLACE_ENV_LLMDBENCH_DEPLOY_CURRENT_TOKENIZER
+      pretrained_model_name_or_path: TOKENIZER
     data:
       type: shared_prefix
       shared_prefix:
@@ -398,8 +335,10 @@ workload:
         per_request: true
     storage:
       local_storage:
-        path: /workspace
+        path: PATH
 
+# Target to which experiment configuration and results should be sent
+# The set of fields are type specific
 upload_target:
   type: s3
   configuration:

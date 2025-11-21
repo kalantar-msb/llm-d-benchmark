@@ -344,7 +344,7 @@ spec:
         # Write output
         out_stream = sys.stdout if args.output == "-" else open(args.output, "w", encoding="utf-8")
         try:
-            yaml.safe_dump(doc, out_stream, sort_keys=False)
+            yaml.safe_dump(doc, out_stream, sort_keys=False, width=float("inf"))
         finally:
             if args.output != "-":
                 out_stream.close()

@@ -30,6 +30,10 @@ spec:
     - name: namespace
       type: string
       description: Kubernetes namespace where training will execute
+    - name: debug
+      type: string
+      default: "false"
+      description: Flag indicating whether or not to delete deployed objects (no when debug true)
 
   tasks:
 
@@ -57,11 +61,11 @@ spec:
     - loopName: per-stack
       foreach:
         domain:
-          pluginConfigFile: {{ stack.treatments.pluginConfigFile | tojson }}
-
-      vars:
-        stackId: "{{ pluginConfigFile | dns }}"
-        stackModelLabel:  "$(params.experimentId)-{{pluginConfigFile | dns}}"
+          blockSize: {{ stack.factors.blockSize }}
+          numCpuBlocks: {{ stack.factors.numCpuBlocks }}
+      vars: 
+        stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
+        stackModelLabel: "$(params.experimentId)-{{ blockSize }}-{{ numCpuBlocks }}"
         lastTreatmentIdx: "{{ (workload.treatments|length) - 1 }}"
 
       tasks:
@@ -74,9 +78,6 @@ spec:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
             - { name: config, value: {{ stack.gaie.configuration }} }
-            - name: overrides
-              value: |
-                 inferenceExtension.pluginConfigFile="{{ stackId }}"
 
         - name: deploy-model-{{ stackId }}
           taskRef: { name: deploy-model }
@@ -87,20 +88,16 @@ spec:
             - { name: model, value: $(params.model) }
             - { name: modelLabel, value: "{{ stackModelLabel }}"}
             - { name: namespace , value: $(params.namespace) }
-            - { name: config, value: {{ stack.model.helmValues }} }
+            - { name: config, value: {{ stack.model.configuration }} }
             - name: overrides
               value:
-                - decode.replicas=2
+                - decode.replicas=1
                 - decode.resources.limits.cpu=16
                 - decode.resources.limits.memory=64Gi
                 - decode.resources.requests.cpu=16
                 - decode.resources.requests.memory=64Gi
-                - decode.containers[name="vllm"].args=--enforce-eager
-                - decode.containers[name="vllm"].args=--disable-log-requests
-                - decode.containers[name="vllm"].args=--disable-uvicorn-access-log
-                - decode.containers[name="vllm"].args=--block-size=64
+                - decode.containers[name="vllm"].args=--kv-transfer-config={"kv_connector":"OffloadingConnector","kv_role":"kv_both","kv_connector_extra_config":{"block_size":{{ blockSize }},"num_cpu_blocks":{{ numCpuBlocks }} }}
                 - decode.containers[name="vllm"].args=--max-model-len=16000
-                - decode.containers[name="vllm"].env[name="UCX_SOCKADDR_TLS_PRIORITY"]="tcp"
                 - decode.acceleratorTypes.labelKey="nvidia.com/gpu.product"
                 - decode.acceleratorTypes.labelValues=NVIDIA-H100-80GB-HBM3
                 - prefill.create=false
@@ -158,6 +155,7 @@ spec:
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
         - name: delete-model-{{ stackId }}
           description: Delete the model engine and workload generator.
@@ -166,6 +164,7 @@ spec:
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
         - name: delete-gaie-{{ stackId }}
           description: Delete the gaie resources.
@@ -174,19 +173,14 @@ spec:
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
-    - name: delete-gateway
+    # We rely on the finally block to delete this
+    # It is hard to express all the dependencies when using 
+    # factors.
+    {# - name: delete-gateway
       description: Delete gateway
-      taskRef: { name: delete-gateway }
-      runAfter:
-        {% for p in stack.treatments.pluginConfigFile %}
-        - delete-httproute-{{ p | dns }}
-        - delete-gaie-{{ p | dns }}
-        - delete-model-{{ p | dns }}
-        {% endfor %}
-      params:
-        - { name: experimentId, value: $(params.experimentId) }
-        - { name: namespace , value: $(params.namespace) }
+      taskRef: { name: delete-gateway } #}
 
   finally:
     # Loop in 'finally': make all stacks are deleted when done
@@ -194,11 +188,12 @@ spec:
     - loopName: cleanup
       foreach:
         domain:
-          pluginConfigFile: {{ stack.treatments.pluginConfigFile }}
+          blockSize: {{ stack.factors.blockSize }}
+          numCpuBlocks: {{ stack.factors.numCpuBlocks }}
 
       vars:
-        stackId: "{{ pluginConfigFile | dns }}"
-        stackModelLabel:  "$(params.experimentId)-{{pluginConfigFile | dns}}"
+        stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
+        stackModelLabel:  "$(params.experimentId)-{{ blockSize }}-{{ numCpuBlocks }}"
 
       tasks:
         - name: finally-delete-httproute-{{ stackId }}
@@ -206,21 +201,25 @@ spec:
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
         - name: finally-delete-model-{{ stackId }}
           taskRef: { name: delete-model }
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
         - name: finally-delete-gaie-{{ stackId }}
           taskRef: { name: delete-gaie }
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
+            - { name: debug, value: $(params.debug) }
 
     - name: finally-delete-gateway
       taskRef: { name: delete-gateway }
       params:
         - { name: experimentId, value: $(params.experimentId) }
         - { name: namespace , value: $(params.namespace) }
+        - { name: debug, value: $(params.debug) }

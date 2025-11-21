@@ -26,7 +26,7 @@ Each Step is implemented by a Container in the Pod.
 
 1. HF token
 2. s3 bucket and necessary keys for uploading results
-3. tekton CLI (`tkn`)
+3. Access to cluster with tekton
 
 ### Setup
 
@@ -135,8 +135,14 @@ Each Step is implemented by a Container in the Pod.
 
     Run the pipeline by deploying the PipelineRun:
 
+
     ```shell
     kubectl apply -f tektoncsample/prefix-caching/pipelinerun.yaml
+    ```
+    ```shell
+    export EXPERIMENT_ID=
+    export NAMESPACE=
+    envsubst < tektoncsample/prefix-caching/pipelinerun.yaml | kubectl apply -f -
     ```
 
 ### Inspection

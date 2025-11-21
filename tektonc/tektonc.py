@@ -317,7 +317,7 @@ def expand_list(nodes: Iterable[Any],
             # Render the entire task node in one Jinja pass so {% set %} persists.
             # SAFETY: if the protector ever escaped outside a __jinja__ block,
             # make sure we unescape here so plain tasks evaluate correctly.
-            node_text = yaml.safe_dump(copy.deepcopy(node), sort_keys=False)
+            node_text = yaml.safe_dump(copy.deepcopy(node), sort_keys=False, width=float("inf"))
             node_text = _unescape_inner_jinja(node_text)
             try:
                 rendered_text = env.from_string(node_text).render(**scope)
@@ -474,7 +474,7 @@ def main(argv=None) -> int:
             _explain(expanded)
 
         # 5) Output
-        out_text = yaml.safe_dump(expanded, sort_keys=False)
+        out_text = yaml.safe_dump(expanded, sort_keys=False, width=float("inf"))
         if args.out:
             with open(args.out, "w") as f:
                 f.write(out_text)
