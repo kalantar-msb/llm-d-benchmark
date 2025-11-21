@@ -21,13 +21,13 @@ experiment:
 # model), and the model.
 # This includes variation defined as factors or treatments. The pipeline template defines
 # which is used.
-# Note that tektonc is independent of the  terminology ("stack", "factor" and "treatment").
+# Note that tektonc is independent of the  terminology ("stack", "levels" and "treatment").
 # Other terms can be used. These terms are used to match those in llm-d-benchmark.
 stack:
   # You can specify a set of factors (for a set of values for each) over which 
   # the cartesian product of combinations of model stacks will be tested in parallel.
   # In this example, 3 x 2 = 6
-  factors:
+  levels:
     blockSize:
       - 64
       # - 128
@@ -267,8 +267,11 @@ stack:
 
 # the workload that should be run against each stack. Specified by identifying the 
 # load generation harness, a default configuration for it and fields to vary.
-# As with the stack, varying fields can be specified using factors or treatments.
+# As with the stack, varying fields can be specified using levels or treatments.
 workload:
+  # levels:
+  #   question_len: []
+  #   output_len: []
   treatments:
     - question_len: 100
       output_len: 100
@@ -292,6 +295,8 @@ workload:
   # The workload harness to be used for load generation and data collection
   harness: inference-perf
   # default configuration for the specific harness
+  # This is the llm-d-benchmark profile:
+  #    workload/profiles/inference-perf/shared_prefix_synthetic.yaml.in
   profileTemplate:
     load:
       type: constant

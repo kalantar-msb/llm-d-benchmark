@@ -61,12 +61,16 @@ spec:
     - loopName: per-stack
       foreach:
         domain:
-          blockSize: {{ stack.factors.blockSize }}
-          numCpuBlocks: {{ stack.factors.numCpuBlocks }}
-      vars: 
+          blockSize: {{ stack.levels.blockSize }}
+          numCpuBlocks: {{ stack.levels.numCpuBlocks }}
+      vars:
+        # stackId is used to distinquish between different model stacks and to avoid 
+        # object name conflicts
         stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
+        # stackModelLabel is used to distinguish between models and to configure traffic
         stackModelLabel: "$(params.experimentId)-{{ blockSize }}-{{ numCpuBlocks }}"
-        lastTreatmentIdx: "{{ (workload.treatments|length) - 1 }}"
+        # lastWorkloadTreatmentIdx identifies the last workload treatment (for cleanup)
+        lastWorkloadTreatmentIdx: "{{ (workload.treatments|length) - 1 }}"
 
       tasks:
 
@@ -151,7 +155,7 @@ spec:
         - name: delete-httproute-{{ stackId }}
           description: Delete the HTTPRoute.
           taskRef: { name: delete-httproute }
-          runAfter: [ "run-workload-{{ stackId }}-{{ lastTreatmentIdx }}" ]
+          runAfter: [ "run-workload-{{ stackId }}-{{ lastWorkloadTreatmentIdx }}" ]
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
@@ -160,7 +164,7 @@ spec:
         - name: delete-model-{{ stackId }}
           description: Delete the model engine and workload generator.
           taskRef: { name: delete-model }
-          runAfter: [ "run-workload-{{ stackId }}-{{ lastTreatmentIdx }}" ]
+          runAfter: [ "run-workload-{{ stackId }}-{{ lastWorkloadTreatmentIdx }}" ]
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
@@ -169,7 +173,7 @@ spec:
         - name: delete-gaie-{{ stackId }}
           description: Delete the gaie resources.
           taskRef: { name: delete-gaie }
-          runAfter: [ "run-workload-{{ stackId }}-{{ lastTreatmentIdx }}" ]
+          runAfter: [ "run-workload-{{ stackId }}-{{ lastWorkloadTreatmentIdx }}" ]
           params:
             - { name: namespace , value: $(params.namespace) }
             - { name: modelLabel, value: "{{ stackModelLabel }}" }
@@ -177,7 +181,7 @@ spec:
 
     # We rely on the finally block to delete this
     # It is hard to express all the dependencies when using 
-    # factors.
+    # levels.
     {# - name: delete-gateway
       description: Delete gateway
       taskRef: { name: delete-gateway } #}
@@ -188,8 +192,8 @@ spec:
     - loopName: cleanup
       foreach:
         domain:
-          blockSize: {{ stack.factors.blockSize }}
-          numCpuBlocks: {{ stack.factors.numCpuBlocks }}
+          blockSize: {{ stack.levels.blockSize }}
+          numCpuBlocks: {{ stack.levels.numCpuBlocks }}
 
       vars:
         stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
