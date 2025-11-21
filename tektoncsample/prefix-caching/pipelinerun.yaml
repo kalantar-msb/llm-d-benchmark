@@ -3,6 +3,9 @@ kind: PipelineRun
 metadata:
   name: prefix-caching
 spec:
+  timeouts:
+    pipeline: 6h        # overall PipelineRun
+    tasks: 5h30m          # per-task timeout
   taskRunTemplate:
     serviceAccountName: helm-installer
   workspaces:
