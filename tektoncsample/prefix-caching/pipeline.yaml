@@ -166,7 +166,7 @@ spec:
           containers:
           - name: vllm
             mountModelVolume: true
-            image: ghcr.io/llm-d/llm-d-cuda:v0.3.1
+            image: vllm/vllm-openai:v0.11.2
             modelCommand: vllmServe
             args:
             - --enforce-eager
