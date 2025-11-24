@@ -275,22 +275,22 @@ workload:
   treatments:
     - question_len: 100
       output_len: 100
-    - question_len: 100
-      output_len: 200
-    - question_len: 100
+    # - question_len: 100
+    #   output_len: 200
+    # - question_len: 100
+    #   output_len: 1000
+    # - question_len: 300
+    #   output_len: 100
+    # - question_len: 300
+    #   output_len: 300
+    - question_len: 300
       output_len: 1000
-    - question_len: 300
-      output_len: 100
-    - question_len: 300
+    # - question_len: 1000
+    #   output_len: 100
+    - question_len: 1000
       output_len: 300
-    - question_len: 300
-      output_len: 1000
-    - question_len: 1000
-      output_len: 100
-    - question_len: 1000
-      output_len: 300
-    - question_len: 1000
-      output_len: 1000
+    # - question_len: 1000
+    #   output_len: 1000
 
   # The workload harness to be used for load generation and data collection
   harness: inference-perf

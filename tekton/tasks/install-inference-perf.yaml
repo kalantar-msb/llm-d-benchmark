@@ -15,6 +15,7 @@ spec:
         - { name: GIT_REPO_URL, value: "https://github.com/kubernetes-sigs/inference-perf.git" }
         - { name: GIT_REVISION, value: "main" }
         - { name: GIT_COMMIT, value: "e8e0aa99c57f2ffa0912df7ba1fbd2a8a596a041" }
+        # - { name: GIT_COMMIT, value: "1ccc48b6bb9c9abb61558b719041fb000b265e59" }
         - { name: HARNESS, value: inference-perf }
 
       image: python:3.12.9-slim-bookworm

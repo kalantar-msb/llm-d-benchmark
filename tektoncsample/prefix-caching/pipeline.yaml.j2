@@ -158,8 +158,8 @@ spec:
                     - { name: profileTemplate, value: {{ workload.profileTemplate }} }
                     - name: treatment
                       value: |
-                        data.question_len={{ treatment_i.item.question_len }}
-                        data.output_len={{ treatment_i.item.output_len }}
+                        data.shared_prefix.question_len={{ treatment_i.item.question_len }}
+                        data.shared_prefix.output_len={{ treatment_i.item.output_len }}
                     - { name: results_dir, value: "{{ resultPath }}" }
 
         # after workloads completed, clean up stack
