@@ -30,7 +30,7 @@ stack:
   levels:
     blockSize:
       - 64
-      # - 128
+      - 128
       # - 256
     numCpuBlocks:
       - 1000
@@ -283,8 +283,8 @@ workload:
     #   output_len: 100
     # - question_len: 300
     #   output_len: 300
-    - question_len: 300
-      output_len: 1000
+    # - question_len: 300
+    #   output_len: 1000
     # - question_len: 1000
     #   output_len: 100
     - question_len: 1000
@@ -305,16 +305,16 @@ workload:
         duration: 50
       - rate: 5
         duration: 50
-      - rate: 8
-        duration: 50
-      - rate: 10
-        duration: 50
-      - rate: 12
-        duration: 50
-      - rate: 15
-        duration: 50
-      - rate: 20
-        duration: 50
+      # - rate: 8
+      #   duration: 50
+      # - rate: 10
+      #   duration: 50
+      # - rate: 12
+      #   duration: 50
+      # - rate: 15
+      #   duration: 50
+      # - rate: 20
+      #   duration: 50
     api:
       type: completion
       streaming: true

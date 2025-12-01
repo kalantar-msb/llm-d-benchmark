@@ -66,6 +66,13 @@ spec:
       workspaces:
         - name: source
 
+    - name: install-data-convertion-tools
+      description: |
+        Install tools to convert harness output to universal format.
+      taskRef: { name: install-convert }
+      workspaces: 
+        - name: source
+
     # Loop: Run stacks (different model engine configurations) in parallel
     - loopName: per-stack
       foreach:
@@ -77,7 +84,7 @@ spec:
         # object name conflicts
         stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
         # stackModelLabel is used to distinguish between models and to configure traffic
-        stackModelLabel: "$(params.experimentId)-{{ blockSize }}-{{ numCpuBlocks }}"
+        stackModelLabel: "stack-{{ blockSize }}-{{ numCpuBlocks }}"
         # lastWorkloadTreatmentIdx identifies the last workload treatment (for cleanup)
         lastWorkloadTreatmentIdx: "{{ (workload.treatments|length) - 1 }}"
 
@@ -134,7 +141,8 @@ spec:
               treatment_i: {{ enumerate_list(workload.treatments) }}
           vars: 
             taskPostfix: "{{ stackId }}-{{ treatment_i.i }}"
-            resultPath: "{{ stackId }}-{{ treatment_i.item.output_len }}_{{ treatment_i.item.question_len }}"
+            resultsPath: "$(params.experimentId)/{{ stackModelLabel }}"
+            treatmentLabel: "treatment-{{ treatment_i.item.output_len }}_{{ treatment_i.item.question_len }}"
 
           tasks:
             - __jinja__: |
@@ -160,7 +168,8 @@ spec:
                       value: |
                         data.shared_prefix.question_len={{ treatment_i.item.question_len }}
                         data.shared_prefix.output_len={{ treatment_i.item.output_len }}
-                    - { name: results_dir, value: "{{ resultPath }}" }
+                    - { name: results_dir, value: "{{ resultsPath }}" }
+                    - { name: treatment_path, value: "{{ treatmentLabel }}" }
 
         # after workloads completed, clean up stack
         - name: delete-httproute-{{ stackId }}
@@ -197,6 +206,24 @@ spec:
       description: Delete gateway
       taskRef: { name: delete-gateway } #}
 
+    # analyze results when all done
+    - name: analyze-results
+      description: Analyze results from all runs
+      taskRef: { name: analyze-{{ workload.harness }} }
+      runAfter:
+      {% for i in stack.levels.blockSize %}
+      {% for j in stack.levels.numCpuBlocks %}
+        - "delete-model-{{ i }}-{{ j }}"
+      {% endfor %}
+      {% endfor %}
+      workspaces:
+        - name: source
+        - name: data
+        - name: hf-credentials
+      params:
+        - { name: results_dir, value: "$(params.experimentId)" }
+
+
   finally:
     # Loop in 'finally': make all stacks are deleted when done
     # Should we also delete results (assuming they were uploaded)
@@ -208,7 +235,7 @@ spec:
 
       vars:
         stackId: "{{ blockSize }}-{{ numCpuBlocks }}"
-        stackModelLabel:  "$(params.experimentId)-{{ blockSize }}-{{ numCpuBlocks }}"
+        stackModelLabel:  "stack-{{ blockSize }}-{{ numCpuBlocks }}"
 
       tasks:
         - name: finally-delete-httproute-{{ stackId }}

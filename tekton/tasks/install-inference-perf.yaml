@@ -25,7 +25,7 @@ spec:
 
         echo "🔄 Installing required tools"
         apt-get update -y
-        apt-get install -y git
+        apt-get install -y git wget
         rm -rf /var/lib/apt/lists/*
 
         HARNESS_DIR=$(workspaces.source.path)/harnesses
@@ -37,5 +37,11 @@ spec:
 
         echo "📦 Installing ${HARNESS}"
         pip install "git+${GIT_REPO_URL}@${GIT_COMMIT}"
-
         echo "✔ Done installing ${HARNESS}"
+        pip list
+
+        echo "📦 Installing analysis tools"
+        wget -q https://raw.githubusercontent.com/llm-d/llm-d-benchmark/refs/heads/main/build/requirements-analysis.txt -O /workspace/requirements-analysis.txt
+        pip install -r /workspace/requirements-analysis.txt
+        echo "✔ Done installing analysis tools"
+        pip list
