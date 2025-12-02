@@ -130,6 +130,7 @@ Each Step is implemented by a Container in the Pod.
     python tektonc/tektonc.py \
     -t tektoncsample/prefix-caching/pipeline.yaml.j2 \
     -f tektoncsample/prefix-caching/values.yaml \
+    -r tektoncsample/prefix-caching/pipelinerun.yaml \
     -o tektoncsample/prefix-caching/pipeline.yaml
 
     kubectl apply -f tektoncsample/prefix-caching/pipeline.yaml
