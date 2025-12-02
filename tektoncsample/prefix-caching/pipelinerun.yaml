@@ -49,11 +49,12 @@ spec:
           numCpuBlocks:
             - 1000
             # - 10000
-        model:
-          configuration:
-            decode:
-              parallelism:
-                tensor: 8
+        # Other things can be overridden too. For example:
+        # model:
+        #   configuration:
+        #     decode:
+        #       parallelism:
+        #         tensor: 8
     - name: workload
       value:
         treatments:

@@ -164,7 +164,7 @@ spec:
             - NVIDIA-H100-80GB-HBM3
           parallelism:
             data: 1
-            tensor: 8
+            tensor: 1
           annotations:
             deployed-by: tekton
             modelservice: llm-d-benchmark
