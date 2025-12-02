@@ -23,6 +23,9 @@ spec:
     - name: namespace
       type: string
       description: Kubernetes namespace where training will execute
+    - name: num_iter
+      type: string
+      description: Number of BLIS training iterations
 
   tasks:
     # Loop: Run stacks (different model engine configurations) in parallel
@@ -46,6 +49,8 @@ spec:
               value: "{{variation_i.item.vllm_version}}"
             - name: TRAINING_FILEPATH
               value: "blis_rh_final.xlsx"
+            - name: num_iter
+              value: "$(params.num_iter)"
             - { name: results_dir, value: "variation-{{variation_i.item.LLM_NAME|dns}}-{{variation_i.item.TP}}-{{variation_i.item.GPU}}-{{variation_i.item.vllm_version|dns}}" }
 
        

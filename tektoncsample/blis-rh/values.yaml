@@ -1,5 +1,5 @@
 experiment:
-  name: blis-train-rh-scenario6
+  name: blis-rh-train
   description: Training pipeline for BLIS scenario 6
 upload_target:
   type: s3

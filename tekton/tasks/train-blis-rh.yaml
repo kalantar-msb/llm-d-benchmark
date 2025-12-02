@@ -12,6 +12,8 @@ spec:
   params:
     - name: results_dir
       type: string
+    - name: num_iter
+      type: string
     - name: LLM_NAME
       type: string
     - name: TP
@@ -24,7 +26,7 @@ spec:
       type: string
   
   steps:
-    - name: placeholder
+    - name: build-golang-sim
       image: golang:1.25.5-bookworm
       script: |
         #!/bin/sh
@@ -42,7 +44,7 @@ spec:
         go build -o /workspace/simulation_worker main.go
         ls /workspace/simulation_worker
 
-    - name: placeholder
+    - name: train-bliss
       image: python:3.12.9-slim-bookworm
       env:
         - name: SIM_WORKER_PATH
@@ -56,9 +58,12 @@ spec:
         - name: VLLM_VERSION
           value: $(params.VLLM_VERSION)
         - name: TRAINING_FILEPATH
-          value: "$(workspaces.data.path)/$TRAINING_FILEPATH"
+          value: "$(workspaces.data.path)/$(params.TRAINING_FILEPATH)"
         - name: RESULTS_DIR
           value: "$(workspaces.data.path)/$(params.results_dir)"
+        - name: NUM_ITER
+          value: $(params.num_iter)
+
 
       script: |
         #!/bin/sh

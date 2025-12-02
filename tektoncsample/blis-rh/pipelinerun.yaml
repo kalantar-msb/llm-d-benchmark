@@ -26,7 +26,7 @@ spec:
   params:
     - { name: experimentId, value: "Dec2-blis-rh" }
     - { name: namespace, value: toslali }
-    - { name: training-dataset, value: toslali }
+    - { name: num_iter, value: 2000 }
     - name: stack
       value:
         variations: 
