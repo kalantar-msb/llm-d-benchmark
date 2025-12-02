@@ -24,26 +24,26 @@ experiment:
 # Note that tektonc is independent of the  terminology ("stack", "levels" and "treatment").
 # Other terms can be used. These terms are used to match those in llm-d-benchmark.
 stack:
-  # You can specify a set of factors (for a set of values for each) over which 
-  # the cartesian product of combinations of model stacks will be tested in parallel.
-  # In this example, 3 x 2 = 6
-  levels:
-    blockSize:
-      - 64
-      - 128
-      # - 256
-    numCpuBlocks:
-      - 1000
-      # - 10000
-  # Alternatively, you can specify a specify specific combinations of factors
-  # to test in parallel. In this case 3 model stacks will be tested.
-  # treatments:
-  #   - blockSize: 64
-  #     numCpuBlocks: 1000
-  #   - blockSize: 128
-  #     numCpuBlocks: 1000
-  #   - blockSize: 256
-  #     numCpuBlocks: 10000
+  # # You can specify a set of factors (for a set of values for each) over which 
+  # # the cartesian product of combinations of model stacks will be tested in parallel.
+  # # In this example, 3 x 2 = 6
+  # levels:
+  #   blockSize:
+  #     - 64
+  #     - 128
+  #     # - 256
+  #   numCpuBlocks:
+  #     - 1000
+  #     # - 10000
+  # # Alternatively, you can specify a specify specific combinations of factors
+  # # to test in parallel. In this case 3 model stacks will be tested.
+  # # treatments:
+  # #   - blockSize: 64
+  # #     numCpuBlocks: 1000
+  # #   - blockSize: 128
+  # #     numCpuBlocks: 1000
+  # #   - blockSize: 256
+  # #     numCpuBlocks: 10000
 
   # default gateway configuration
   # the configuration field is a helm values file
@@ -269,28 +269,28 @@ stack:
 # load generation harness, a default configuration for it and fields to vary.
 # As with the stack, varying fields can be specified using levels or treatments.
 workload:
-  # levels:
-  #   question_len: []
-  #   output_len: []
-  treatments:
-    - question_len: 100
-      output_len: 100
-    # - question_len: 100
-    #   output_len: 200
-    # - question_len: 100
-    #   output_len: 1000
-    # - question_len: 300
-    #   output_len: 100
-    # - question_len: 300
-    #   output_len: 300
-    # - question_len: 300
-    #   output_len: 1000
-    # - question_len: 1000
-    #   output_len: 100
-    - question_len: 1000
-      output_len: 300
-    # - question_len: 1000
-    #   output_len: 1000
+  # # levels:
+  # #   question_len: []
+  # #   output_len: []
+  # treatments:
+  #   - question_len: 100
+  #     output_len: 100
+  #   # - question_len: 100
+  #   #   output_len: 200
+  #   # - question_len: 100
+  #   #   output_len: 1000
+  #   # - question_len: 300
+  #   #   output_len: 100
+  #   # - question_len: 300
+  #   #   output_len: 300
+  #   # - question_len: 300
+  #   #   output_len: 1000
+  #   # - question_len: 1000
+  #   #   output_len: 100
+  #   - question_len: 1000
+  #     output_len: 300
+  #   # - question_len: 1000
+  #   #   output_len: 1000
 
   # The workload harness to be used for load generation and data collection
   harness: inference-perf

@@ -416,6 +416,7 @@ def parse_args(argv=None):
     ap = argparse.ArgumentParser(description="Render + expand Tekton templates with loop nodes")
     ap.add_argument("-t", "--template", required=True, help="Jinja template file (use - for stdin)")
     ap.add_argument("-f", "--values",   required=True, help="YAML/JSON values file (use - for stdin)")
+    ap.add_argument("-r", "--pipelinerun", required=False, help="PipelineRun definition")
     ap.add_argument("-o", "--out", help="Output YAML file (default: stdout)")
     ap.add_argument("--explain", action="store_true", help="Print name/runAfter table to stderr after expansion")
     ap.add_argument("--debug", action="store_true", help="Print full traceback and ingternal diagnostics")
@@ -446,11 +447,55 @@ def _explain(expanded: Mapping[str, Any]) -> None:
     if "finally" in spec:
         print_section("spec.finally", spec.get("finally", []))
 
+
+
+def deep_merge(base: dict, override: dict) -> dict:
+    """Recursively merge override into base without losing base keys."""
+    # print(">>>>>> merging override into base:")
+    # print(">>>>>>>>>> base:")
+    # print(json.dumps(base, indent=4))
+    # print(">>>>>>>>>> override:")
+    # print(json.dumps(override, indent=4))
+    for k, v in override.items():
+        # print(f">>>>> considering {k} and {v}")
+        # print(f">>>>>>>>>> {k} in base = {k in base}")
+        # if k in base:
+            # print(f">>>>>>>>>> isinstance(base[k], dict) = {isinstance(base[k], dict)}")
+            # print(f">>>>>>>>>> isinstance(v, dict) = {isinstance(v, dict)}")
+        if (
+            k in base
+            and isinstance(base[k], dict)
+            and isinstance(v, dict)
+        ):
+            # print(">>>>>>>>>> deep merging")
+            base[k] = deep_merge(base[k], v)
+        else:
+            # print(f"setting base[{k}] to {v}")
+            base[k] = v
+    # print(">>>>> deep merge returning:")
+    # print(json.dumps(base, indent=4))
+    return base
+
+def merge_pr(values, pr):
+    if "spec" in pr and "params" in pr["spec"]:
+        params = {}
+        for p in pr["spec"]["params"]:
+            if p["name"] in ["stack", "workload"]:
+                params[p["name"]]= p["value"]
+        return deep_merge(values, params)
+
 def main(argv=None) -> int:
     args = parse_args(argv)
 
     try:
         values = _load_values(args.values)
+        # print(">>>>> starting values is:")
+        # print(json.dumps(values, indent=4))
+        if (args.pipelinerun):
+            pr = _load_values(args.pipelinerun)
+            values = merge_pr(values, pr)
+        # print(">>>>> ending values is:")
+        # print(json.dumps(values, indent=4))
 
         # 1) OUTER render with globals; loop vars are preserved verbatim
         env_outer = build_env_outer()

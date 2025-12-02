@@ -56,6 +56,3 @@ spec:
         chmod +x convert.py schema.py
         ls -l
         echo "✅ Data convertion tool installed."
-
-
-        wget -O $(workspaces.source.path)/analysis/

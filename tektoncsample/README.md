@@ -26,7 +26,7 @@ Each Step is implemented by a Container in the Pod.
 
 1. HF token
 2. s3 bucket and necessary keys for uploading results
-3. Access to cluster with tekton
+3. Access to cluster with tekton ([installing Tekton](https://tekton.dev/docs/installation/pipelines/))
 
 ### Setup
 

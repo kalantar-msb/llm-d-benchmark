@@ -39,3 +39,39 @@ spec:
     - { name: model, value: "meta-llama/Llama-3.1-8B-Instruct" }
     - { name: namespace, value: $NAMESPACE }
     - { name: debug, value: "true" }
+    - name: stack
+      value:
+        levels:
+          blockSize:
+            - 64
+            # - 128
+            # - 256
+          numCpuBlocks:
+            - 1000
+            # - 10000
+        model:
+          configuration:
+            decode:
+              parallelism:
+                tensor: 8
+    - name: workload
+      value:
+        treatments:
+          - question_len: 100
+            output_len: 100
+          # - question_len: 100
+          #   output_len: 200
+          # - question_len: 100
+          #   output_len: 1000
+          # - question_len: 300
+          #   output_len: 100
+          # - question_len: 300
+          #   output_len: 300
+          # - question_len: 300
+          #   output_len: 1000
+          # - question_len: 1000
+          #   output_len: 100
+          # - question_len: 1000
+          #   output_len: 300
+          # - question_len: 1000
+          #   output_len: 1000      
