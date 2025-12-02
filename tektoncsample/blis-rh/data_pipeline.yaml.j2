@@ -36,6 +36,7 @@ spec:
       tasks:
         - name: train-blis-rh-{{ variation_i.i }}
           taskRef: { name: train-blis-rh }
+          timeout: "350m" 
           workspaces:
             - name: data
           params:
