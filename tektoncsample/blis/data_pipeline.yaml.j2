@@ -62,6 +62,7 @@ spec:
         - name: create-exp-config-{{ stackId }}
           taskRef: { name: create-exp-config }
           runAfter: [ "install-guidellm" ]
+          # runAfter: [ "download-model" ]
           workspaces:
             - name: data
           params:
@@ -78,6 +79,7 @@ spec:
             Deploy a per-experiment OpenTelemetry collector
           taskRef: { name: create-otel-collector }
           runAfter: [ "install-guidellm" ]
+          # runAfter: [ "download-model" ]
           workspaces:
             - name: data
           params:
