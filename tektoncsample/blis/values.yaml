@@ -6,14 +6,51 @@ stack:
   treatments:
     tensorParallelism:
       - 1
-      # - 4
-      # - 8
+      - 2
+      - 4
 
-  MAX_MODEL_LEN: 8192
+  # MAX_MODEL_LEN: 4096
+  MAX_MODEL_LEN: 4096
   # MAX_MODEL_LEN: 13312
-  MAX_NUM_BATCHED_TOKENS: 4096
-  # MAX_NUM_BATCHED_TOKENS: 2048
+  MAX_NUM_BATCHED_TOKENS: 2048
   MAX_NUM_SEQS: 256
+  # MAX_NUM_BATCHED_TOKENS: 64
+  # MAX_NUM_SEQS: 32
+
+  # workload:
+  #   app: chatsweep
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 50
+  #     rate: 12
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 284
+  #       prompt_tokens: 70
+  #       prompt_tokens_stdev: 35
+  #       prompt_tokens_min: 2
+  #       prompt_tokens_max: 200
+  #       output_tokens: 215
+  #       output_tokens_stdev: 80
+  #       output_tokens_min: 1
+  #       output_tokens_max: 512
+
+  workload:
+    app: codesweep
+    profile:
+      rate_type: sweep
+      max_requests: 50
+      rate: 12
+      random_seed: 42
+      data:
+        prompt_tokens: 2048
+        prompt_tokens_stdev: 1974
+        prompt_tokens_min: 2
+        prompt_tokens_max: 3500
+        output_tokens: 28
+        output_tokens_stdev: 60
+        output_tokens_min: 6
+        output_tokens_max: 200
 
   # workload:
   #   app: train
@@ -24,32 +61,73 @@ stack:
   #     random_seed: 42
   #     data:
   #       prefix_tokens: 0
-  #       prompt_tokens: 3500
-  #       prompt_tokens_stdev: 2500
+  #       prompt_tokens: 1700
+  #       prompt_tokens_stdev: 1200
   #       prompt_tokens_min: 2
-  #       prompt_tokens_max: 7168
+  #       prompt_tokens_max: 3500
   #       output_tokens: 800
   #       output_tokens_stdev: 500
   #       output_tokens_min: 1
+  #       output_tokens_max: 500
+
+
+  # workload:
+  #   app: train
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 50
+  #     rate: 12
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 0
+  #       prompt_tokens: 3500
+  #       prompt_tokens_stdev: 1500
+  #       prompt_tokens_min: 2
+  #       prompt_tokens_max: 7168
+  #       output_tokens: 200
+  #       output_tokens_stdev: 150
+  #       output_tokens_min: 1
   #       output_tokens_max: 1024
 
-  workload:
-    app: summarization
-    profile:
-      rate_type: sweep
-      max_requests: 40
-      rate: 5
-      random_seed: 42
-      data:
-        prefix_tokens: 820        
-        prompt_tokens: 4096
-        prompt_tokens_stdev: 500
-        prompt_tokens_min: 100
-        prompt_tokens_max: 7168
-        output_tokens: 512
-        output_tokens_stdev: 150
-        output_tokens_min: 10
-        output_tokens_max: 1024
+
+
+
+
+  # workload:
+  #   app: summarization
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 40
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 820        
+  #       prompt_tokens: 4096
+  #       prompt_tokens_stdev: 500
+  #       prompt_tokens_min: 100
+  #       prompt_tokens_max: 7168
+  #       output_tokens: 512
+  #       output_tokens_stdev: 150
+  #       output_tokens_min: 10
+  #       output_tokens_max: 1024
+
+  # workload:
+  #   app: prefilldominant
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 40
+  #     rate: 5
+  #     random_seed: 42
+  #     data:
+  #       prefix_tokens: 1024        
+  #       prompt_tokens: 2048
+  #       prompt_tokens_stdev: 500
+  #       prompt_tokens_min: 100
+  #       prompt_tokens_max: 4096
+  #       output_tokens: 32
+  #       output_tokens_stdev: 16
+  #       output_tokens_min: 1
+  #       output_tokens_max: 64
   
   # workload:
   #   app: chatbot
@@ -182,6 +260,8 @@ stack:
           mountModelVolume: true
           image: "vllm/vllm-openai:v0.11.0"
           modelCommand: vllmServe
+          # args:
+          #   - "--trust-remote-code"
           resources:
             limits:
               memory: 128Gi
