@@ -5,7 +5,7 @@ experiment:
 stack:
   treatments:
     tensorParallelism:
-      - 1
+      # - 1
       - 2
       - 4
 
@@ -17,40 +17,40 @@ stack:
   # MAX_NUM_BATCHED_TOKENS: 64
   # MAX_NUM_SEQS: 32
 
-  # workload:
-  #   app: chatsweep
-  #   profile:
-  #     rate_type: sweep
-  #     max_requests: 50
-  #     rate: 12
-  #     random_seed: 42
-  #     data:
-  #       prefix_tokens: 284
-  #       prompt_tokens: 70
-  #       prompt_tokens_stdev: 35
-  #       prompt_tokens_min: 2
-  #       prompt_tokens_max: 200
-  #       output_tokens: 215
-  #       output_tokens_stdev: 80
-  #       output_tokens_min: 1
-  #       output_tokens_max: 512
-
   workload:
-    app: codesweep
+    app: chatsweep
     profile:
       rate_type: sweep
       max_requests: 50
       rate: 12
       random_seed: 42
       data:
-        prompt_tokens: 2048
-        prompt_tokens_stdev: 1974
+        prefix_tokens: 284
+        prompt_tokens: 70
+        prompt_tokens_stdev: 35
         prompt_tokens_min: 2
-        prompt_tokens_max: 3500
-        output_tokens: 28
-        output_tokens_stdev: 60
-        output_tokens_min: 6
-        output_tokens_max: 200
+        prompt_tokens_max: 200
+        output_tokens: 215
+        output_tokens_stdev: 80
+        output_tokens_min: 1
+        output_tokens_max: 512
+
+  # workload:
+  #   app: codesweep
+  #   profile:
+  #     rate_type: sweep
+  #     max_requests: 50
+  #     rate: 12
+  #     random_seed: 42
+  #     data:
+  #       prompt_tokens: 2048
+  #       prompt_tokens_stdev: 1974
+  #       prompt_tokens_min: 2
+  #       prompt_tokens_max: 3500
+  #       output_tokens: 28
+  #       output_tokens_stdev: 60
+  #       output_tokens_min: 6
+  #       output_tokens_max: 200
 
   # workload:
   #   app: train
@@ -266,11 +266,9 @@ stack:
             limits:
               memory: 128Gi
               cpu: "32"
-              nvidia.com/gpu: "1"
             requests:
               memory: 128Gi
               cpu: "32"
-              nvidia.com/gpu: "1"
           extraConfig:
             startupProbe:
               httpGet:
